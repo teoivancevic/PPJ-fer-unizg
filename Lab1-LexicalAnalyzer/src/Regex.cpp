@@ -1,17 +1,7 @@
 #include"Regex.hpp"
 
 //copy konstruktor
-Regex::Regex(const Regex& r) : 
-    size(r.size), 
-    kleen(r.kleen), 
-    collapsed(r.collapsed), 
-    exp(new char[size]), 
-    subdivisions(r.subdivisions), 
-    regex_type(r.regex_type) 
-{   
-    std::memcpy((void*) exp, r.exp, size);
-    //std::cout <<"copied segment\n";
-}
+Regex::Regex(const Regex& r) : Regex((std::string) r) {}
 
 //move konstruktor
 Regex::Regex(Regex&& r) noexcept : 
@@ -69,9 +59,7 @@ char Regex::deliminator() const {
     
 //overload za konverziju u string
 Regex::operator std::string() const {
-    std::string a;
-    a.assign(exp, size);
-    return a;
+    return this->reduce();
 }
 
 //vraća pojednostavljeni regex
@@ -83,7 +71,7 @@ std::string Regex::reduce() const {
         bool bracket = !is_str_const && (regex_type == HAS_SEPARATOR && !is_root) || kleen;
         if (bracket) a += BRA;
         for (auto it = subdivisions.begin(); it != subdivisions.end(); ++it) {
-            if (it != subdivisions.begin()) a += deliminator();
+            if (it != subdivisions.begin() && deliminator()) a += deliminator();
             a += it->reduce();
         }
         if (bracket) a += KET;

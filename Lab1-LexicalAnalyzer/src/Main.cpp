@@ -1,17 +1,16 @@
-#include"Regex.hpp"
+#include"eNKA.hpp"
+#include<iostream>
 
-using namespace print_util;
+using std::cin;
+using std::cout;
 
 int main () {
-    const std::string str = 
-        "(((w)*(((h)))(||||)y|did(the()chi*((ck*{en}*|cros****s)*)th**e)ro(((()())((()))()))**ad?{to see}w||hat(((s)(on|||t|he)))*oth**er(sid{e})))";
-    Regex reg = str;
 
-    //pojednostavljeno
-    std::cout <<reg.reduce() <<"\n\n";
+    Regex r = "(((w)*(((h)))(||||)y|did(the()chi*((ck*{en}*|cros****s)*)th**e)ro(((()())((()))()))**ad?{to see}w||hat(((s)(on|||t|he)))*oth**er(sid{e})))";
 
-    //stablasti ispis
-    printRegex(reg);
-    
-    std::cin.get();
+    FiniteAutomata a = Regex(
+        "Your mother|Deez nuts gotem!"
+    );
+
+    cout <<a.evaluate("Your mother");
 }

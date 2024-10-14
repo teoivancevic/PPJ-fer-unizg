@@ -6,11 +6,13 @@
 #include<cstring>
 #include<memory>
 
-static const char SEPARATOR = '|'; 
-static const char KLEEN = '*'; 
-static const char JOIN = 0; //znak koji odvaja simbole u nizu, 0 označava nepostojeći znak, Regex tada smatra svaki znak zasebnim simbolom
-static const char BRA = '(', KET = ')'; //obićne zagrade za regularne izraze
-static const char INCL_BEGIN = '{', INCL_END = '}'; //zagrade za oznaku referenci
+struct FiniteAutomata;
+
+static char SEPARATOR = '|'; 
+static char KLEEN = '*'; 
+static char JOIN = 0; //znak koji odvaja simbole u nizu, 0 označava nepostojeći znak, Regex tada smatra svaki znak zasebnim simbolom
+static char BRA = '(', KET = ')'; //obićne zagrade za regularne izraze
+static char INCL_BEGIN = '{', INCL_END = '}'; //zagrade za oznaku referenci
 
 /* VILIMOV ZAKON REGEX API ZA C++
     Regex je wrapper za stringove koji na temelju zadanih posebnih znakova (iznad ^^^^) parsira string u segmente 
@@ -28,6 +30,7 @@ static const char INCL_BEGIN = '{', INCL_END = '}'; //zagrade za oznaku referenc
 */
 class Regex {
 public:
+friend FiniteAutomata;
     enum Type {
         HAS_SEPARATOR, /*
             Oznacava da regex ima separator '|'
