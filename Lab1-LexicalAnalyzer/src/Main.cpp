@@ -1,4 +1,4 @@
-#include"eNKA.hpp"
+#include"automata.hpp"
 #include<iostream>
 
 using std::cin;
@@ -6,11 +6,12 @@ using std::cout;
 
 int main () {
 
-    Regex r = "(((w)*(((h)))(||||)y|did(the()chi*((ck*{en}*|cros****s)*)th**e)ro(((()())((()))()))**ad?{to see}w||hat(((s)(on|||t|he)))*oth**er(sid{e})))";
+    //Regex r = "(((w)*(((h)))(||||)y|did(the()chi*((ck*{en}*|cros****s)*)th**e)ro(((()())((()))()))**ad?{to see}w||hat(((s)(on|||t|he)))*oth**er(sid{e})))";
 
-    FiniteAutomata a = Regex(
-        "Your mother|Deez nuts gotem!"
+    NKA a = Regex(
+        "mama*|(ta)*"
     );
 
-    cout <<a.evaluate("Your mother");
+    cout <<a.evaluate("mamta");
+    cout <<a.evaluate("tatatatatatatatatata");
 }

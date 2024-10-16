@@ -6,7 +6,7 @@
 #include<cstring>
 #include<memory>
 
-struct FiniteAutomata;
+struct DKA;
 
 static char SEPARATOR = '|'; 
 static char KLEEN = '*'; 
@@ -30,7 +30,7 @@ static char INCL_BEGIN = '{', INCL_END = '}'; //zagrade za oznaku referenci
 */
 class Regex {
 public:
-friend FiniteAutomata;
+friend DKA;
     enum Type {
         HAS_SEPARATOR, /*
             Oznacava da regex ima separator '|'
@@ -83,6 +83,9 @@ public:
     
     //vraca pojednostavljeni regex
     std::string reduce() const;
+
+    //radi samo za ATOMIC tip, vraća sadržani simbol
+    char get() const;
     
     //overload za ispis regexa
     friend std::ostream &operator<< (std::ostream& os, const Regex& r);

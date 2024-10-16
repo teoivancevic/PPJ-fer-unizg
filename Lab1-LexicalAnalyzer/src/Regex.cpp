@@ -188,7 +188,7 @@ bool Regex::vectorize_string (std::deque<Regex>& v, char* str, size_t size, char
                 );
                 if (!v.back().size) //rješava slučajeve prazne djece ()
                     v.pop_back();
-                else if (v.back().regex_type != ATOMIC && v.back().deliminator() == deliminator) 
+                else if (v.back().regex_type != ATOMIC && v.back().deliminator() == deliminator && !v.back().kleen) 
                 { //rjesšva se nepotrebnih zagraba izmedu operacija istog tipa
                     Regex _temp = std::move(v.back());
                     v.pop_back();
@@ -212,7 +212,7 @@ bool Regex::vectorize_string (std::deque<Regex>& v, char* str, size_t size, char
         );
         if (!v.back().size)
             v.pop_back();
-        else if (v.back().regex_type != ATOMIC && v.back().deliminator() == deliminator) 
+        else if (v.back().regex_type != ATOMIC && v.back().deliminator() == deliminator && !v.back().kleen) 
         {
             Regex _temp = std::move(v.back());
             v.pop_back();
@@ -223,4 +223,10 @@ bool Regex::vectorize_string (std::deque<Regex>& v, char* str, size_t size, char
         }
     }
     return has_delimiter;
+}
+
+char Regex::get() const {
+    if (type() != ATOMIC) 
+        throw std::invalid_argument("Regex must be ATOMIC to call!");
+    return exp[0];
 }
