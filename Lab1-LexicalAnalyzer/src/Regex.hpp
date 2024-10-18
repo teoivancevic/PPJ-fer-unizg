@@ -1,18 +1,17 @@
-#pragma once
 #include<string>
 #include<deque>
 #include<iostream>
 #include<stdexcept>
 #include<cstring>
 #include<memory>
-
-struct DKA;
+#include<unordered_map>
 
 static char SEPARATOR = '|'; 
 static char KLEEN = '*'; 
 static char JOIN = 0; //znak koji odvaja simbole u nizu, 0 označava nepostojeći znak, Regex tada smatra svaki znak zasebnim simbolom
 static char BRA = '(', KET = ')'; //obićne zagrade za regularne izraze
 static char INCL_BEGIN = '{', INCL_END = '}'; //zagrade za oznaku referenci
+static char BLANK = '$';
 
 /* VILIMOV ZAKON REGEX API ZA C++
     Regex je wrapper za stringove koji na temelju zadanih posebnih znakova (iznad ^^^^) parsira string u segmente 
@@ -30,7 +29,7 @@ static char INCL_BEGIN = '{', INCL_END = '}'; //zagrade za oznaku referenci
 */
 class Regex {
 public:
-friend DKA;
+    static std::unordered_map<std::string, Regex> saved;
     enum Type {
         HAS_SEPARATOR, /*
             Oznacava da regex ima separator '|'
@@ -52,11 +51,13 @@ private:
     int collapsed = 0; //brojać ugnježđenih zagrada
     
     //zastavice
-    bool kleen = false;
-    bool is_root = true;
-    bool is_str_const = false;
+    bool kleen;
+    bool is_root = false;
+    bool is_str_const;
 
 public:
+    //default konstruktor
+    Regex();
     //copy konstruktor
     Regex(const Regex& r);
     //move konstruktor
@@ -74,6 +75,18 @@ public:
     Regex(char* str, size_t size, bool is_str_const = false, Type type = HAS_SEPARATOR);
 
     //---------JAVNE METODE------------//
+
+    //assignment operatori
+    void operator= (Regex&& r) noexcept;
+    void operator= (const Regex& r);
+    void operator= (const std::string& r);
+    void operator= (const char* str);
+
+    //sprema regex (koristiti include zagrade)
+    void save_as (const std::string& name);
+    
+    //vraća spremljeni regex
+    static const Regex& open (const std::string& name);
 
     //vraca deliminator, NE SMIJE SE ZVATI ZA ATOMIC TIP!
     char deliminator() const;

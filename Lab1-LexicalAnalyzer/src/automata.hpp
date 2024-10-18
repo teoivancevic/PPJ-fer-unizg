@@ -45,8 +45,9 @@ public:
                 return false;
             currentState = bad_consume(currentState, s);
         }
-        if (currentState.count(end))
-            return true;
+        for (ID state : currentState)
+            if (get(state).acceptable)
+                return true;
         return false;
     }
 
@@ -80,7 +81,7 @@ private:
         if (!get(state).evaluated) {
             get(state).evaluated = true;
             neighborhood = unionize(neighborhood);
-            if (neighborhood.count(end))
+            if (neighborhood.count(end) || state == end)
                 get(state).acceptable = true;
         }
 
@@ -104,7 +105,7 @@ private:
         get(state).optimized = true;
 
         Set<ID>& eps = get_eps_neighbors(state);
-        get(state).next[s] = consume(eps, s);
+        get(state).next[s] = bad_consume(eps, s);
 
         eps.clear();
     }    
@@ -113,7 +114,7 @@ private:
         Set<ID> rez;
 
         for (ID state : set) {
-            remove_eps_transitions(state, s);
+            if (state != start) remove_eps_transitions(state, s);
             make_set_union(rez, get(state).next[s]);
         }
 
@@ -123,9 +124,8 @@ private:
     Set<ID> bad_consume(const Set<ID>& set, sym s) {
         Set<ID> rez;
 
-        for (ID state : set) {
+        for (ID state : set)
             make_set_union(rez, get(state).next[s]);
-        }
 
         return unionize(rez);
     }
