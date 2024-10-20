@@ -165,10 +165,10 @@ void Regex::vectorize_string (char deliminator) {
     for (size_t p = 0; p < size; ++p) 
     {
         //provjera posebnih znakova
-        if (exp[p] == '\\') {
+        if (exp[p] == '\\' && !escape) {
             escape = true;
-            continue;
-        }
+            p++;
+        } else escape = false;
 
         if (!escape) {
             //provjera include izraza { }
@@ -187,14 +187,15 @@ void Regex::vectorize_string (char deliminator) {
             if (exp[p] == KET) bracket_count--;
             if (bracket_count < 0) 
                 throw std::invalid_argument("improper bracket placement");
-            
-            if (bracket_count + include) continue; //ignoriraju se izrazi unutar zagrada i include izraza
 
-            if (exp[p] == BLANK) {
-                if (!deliminator) len++;
-                continue;
-            }
         }
+        if (bracket_count + include) continue; //ignoriraju se izrazi unutar zagrada i include izraza
+        
+        if (exp[p] == BLANK && !escape) {
+            if (!deliminator) len++;
+            continue;
+        }
+        
         //prepoznavanje kleen operatora kada je delimiter prazan znak
         if (!deliminator && p != size-1 && exp[p+1] == KLEEN) p++;
         if (exp[p] == deliminator && !escape || !deliminator) {
@@ -218,7 +219,6 @@ void Regex::vectorize_string (char deliminator) {
             }
             len = p + 1;
         }
-        escape = false;
     }
     if (bracket_count) throw std::invalid_argument("improper bracket placement");
     if (include) throw std::invalid_argument("improper include statement");
