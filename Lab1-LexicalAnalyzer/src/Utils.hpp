@@ -2,6 +2,48 @@
 #include<unordered_map>
 #include<vector>
 #include<cstdint>
+#include<memory>
+#include<string>
+
+static std::string consumeNextWord (std::string& str, char del = ' ') {
+    int i;
+    std::string word;
+    for (i = 0; i<str.size(); i++) {
+        if (str[i] == del) {
+            word = str.substr(0, i);
+            str = str.c_str() + i + 1;
+            return word;
+        }
+    }
+    word = std::move(str);
+    return word;
+}
+
+static std::string readNextWord (const std::string& str, char del = ' ') {
+    std::string word;
+    for (int i = 0; i<str.size(); i++)
+        if (str[i] == del)
+            return str.substr(0, i);
+    return str;
+}
+
+template<typename ACT>
+void forEachWord (std::string str, ACT action, char del = ' ') {
+    while (!str.empty()) {
+        std::string word = consumeNextWord(str, del);
+        if (!word.empty())
+            action(std::move(word));
+    }
+}
+
+template<typename ACT>
+void consumeEachWord (std::string& str, ACT action, char del = ' ') {
+    while (!str.empty()) {
+        std::string word = consumeNextWord(str, del);
+        if (!word.empty())
+            action(std::move(word));
+    }
+}
 
 template <bool cond, typename A, typename B>
 struct meta_elif {

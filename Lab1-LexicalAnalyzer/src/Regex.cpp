@@ -25,8 +25,10 @@ void Regex::operator= (const Regex& r) {
 }
 
 void Regex::operator= (Regex&& r) noexcept {
+    if (is_root) delete[] (exp - collapsed);
     is_str_const = r.is_str_const;
     is_root = r.is_root;
+    is_special = r.is_special;
     collapsed = r.collapsed;
     kleen = r.kleen;
     regex_type = r.regex_type;
@@ -74,13 +76,13 @@ Regex::Regex(const char* str) : Regex((char*) str, strlen(str))
 
 //konstruktor za djecu (nije za uporabu)
 Regex::Regex(char* str, size_t size, bool is_str_const, Type type) 
-    : is_root(false), size(size), exp(str), regex_type(type), is_str_const(is_str_const)
+    : is_root(false), size(size), exp(str), is_str_const(is_str_const)
 {
     if (size <= 0) {
         size = 0;
         return;
     }
-    assertType();
+    assertType(type);
 }
 
 //destruktor se poziva samo za root regex jer ostali djele isti izraz
@@ -95,100 +97,116 @@ Regex::~Regex() {
     Zagrađeni izrazi se razrješavaju i kolapsiraju u čisti izraz.
     Dodatno se provjerava postojanje kleen operatora.
 */
-void Regex::assertType() {
-    switch (regex_type)
+void Regex::assertType(Type type) {
+    if (!size) return;
+    regex_type = type;
+
+    switch (type)
     {
     case HAS_SEPARATOR:
-        regex_type = HAS_SEPARATOR;
-        if (vectorize_string(subdivisions, exp, size, SEPARATOR)) //ako ne uspije prijelazi na sljedeći switch case
-            break;
+        vectorize_string(SEPARATOR);
+        break;
     case HAS_JOIN:
-        regex_type = HAS_JOIN;
-        if (vectorize_string(subdivisions, exp, size, JOIN)) // --//--
-            break;
+        vectorize_string(JOIN);
+        break;
     case ATOMIC:
-        regex_type = ATOMIC;
-        while (exp[0] == BLANK || exp[0] == SEPARATOR && size > 0) {
-            exp++;
-            size--;
-        } 
-        if (!size) return;
+        if (exp[0] == '\\') is_special = true;
+
         if (exp[size-1] == KLEEN) { //kolapsiraj sve kleenove u jedan ako ih ima
             while (exp[size-1] == KLEEN) size--;
             kleen = true;
         }
-        if (exp[0] == INCL_BEGIN) {
-            std::string str = std::string(exp).substr(0, size);
-            subdivisions.emplace_back(open(str));
-        }
+
+        if (exp[0] == INCL_BEGIN) //reference injector
+            subdivisions.emplace_back(open(std::string(exp).substr(0, size)));
         else if (exp[0] == BRA) //provjeri postoji li nested regex
-            subdivisions.emplace_back(exp+1, size-2, false, HAS_SEPARATOR);
-        else return; //inaće gotov assertion
+            subdivisions.emplace_back(exp+1, size-2);
+        else break;
+
         if (!subdivisions.back().size) //ako je nested regex prazan onda si i ti
-            subdivisions.pop_back();
-        else { //inaće preuzmi resurse nested regexa
-            collapsed += 1;
-            bool _kleen = kleen;
-            bool is_str = is_str_const;
-            int _collapsed = collapsed;
-            *this = std::move(subdivisions.back());
-            is_str_const = is_str;
-            kleen |= _kleen;
-            collapsed += _collapsed;
-            return;
-        }
+            size = 0;
+        break;
     }
-    if (subdivisions.empty()) size = 0, kleen = false; //ako nije ATOMIC i nema djece prazan je
-}
+
+    if (!size) return;
+
+    if (subdivisions.empty() && type == HAS_SEPARATOR) //ako nije nasao nista probaj sljedeci
+        assertType(HAS_JOIN);
+    else if (subdivisions.empty() && type == HAS_JOIN) //--//--
+        assertType(ATOMIC);
+    else if (subdivisions.size() == 1) //ako ima samo jedno djete onda ga absorbiraj
+    { 
+        bool _kleen = kleen;
+        bool is_str = is_str_const;
+        char* before = exp;
+        bool referenced = exp[0] == INCL_BEGIN;
+        if (referenced) {
+            bool fuck = true;
+        }
+        *this = std::move(subdivisions.back());
+        is_str_const = is_str;
+        kleen |= _kleen;
+        if (referenced) {
+            bool fuck = true;
+        }
+        if (!referenced)
+            collapsed = exp-before;
+    } 
+} 
 
 /* opis:
     U subdivisions spremi djecu dobivenu separiranjem po '|' ili spajanjem po praznini
     ako ne uspije pronaći traženi delimiter vraca false inaće true
 */
-bool Regex::vectorize_string (std::deque<Regex>& v, char* str, size_t size, char deliminator) {
+void Regex::vectorize_string (char deliminator) {
+    std::deque<Regex>& v = subdivisions;
     int bracket_count = 0; bool include = 0;
-    bool has_delimiter = false;
-    size_t len = 0;
+    size_t len = 0; bool escape = false;
     for (size_t p = 0; p < size; ++p) 
     {
-        //provjera include izraza { }
-        if (str[p] == INCL_BEGIN) {
-            if (include) 
-                throw std::invalid_argument("improper include statement");
-            include = true;
-        }
-        if (str[p] == INCL_END) {
-            if (!include) 
-                throw std::invalid_argument("improper include placement");
-            include = false;
-        }
-        //provjera zagrada ( )
-        if (str[p] == BRA) bracket_count++;
-        if (str[p] == KET) bracket_count--;
-        if (bracket_count < 0) 
-            throw std::invalid_argument("improper bracket placement");
-        
-        if (bracket_count + include) continue; //ignoriraju se izrazi unutar zagrada i include izraza
-
-        if (str[p] == BLANK) {
-            if (!deliminator) len++;
+        //provjera posebnih znakova
+        if (exp[p] == '\\') {
+            escape = true;
             continue;
         }
 
+        if (!escape) {
+            //provjera include izraza { }
+            if (exp[p] == INCL_BEGIN) {
+                if (include) 
+                    throw std::invalid_argument("improper include statement");
+                include = true;
+            }
+            if (exp[p] == INCL_END) {
+                if (!include) 
+                    throw std::invalid_argument("improper include placement");
+                include = false;
+            }
+            //provjera zagrada ( )
+            if (exp[p] == BRA) bracket_count++;
+            if (exp[p] == KET) bracket_count--;
+            if (bracket_count < 0) 
+                throw std::invalid_argument("improper bracket placement");
+            
+            if (bracket_count + include) continue; //ignoriraju se izrazi unutar zagrada i include izraza
+
+            if (exp[p] == BLANK) {
+                if (!deliminator) len++;
+                continue;
+            }
+        }
         //prepoznavanje kleen operatora kada je delimiter prazan znak
-        bool noDelimiter = !deliminator && p != size-1 && str[p] != BLANK;
-        if (noDelimiter) noDelimiter = str[p+1] != KLEEN;
-        if (noDelimiter || str[p] == deliminator) {
-            has_delimiter = true;
-            if (p-len+noDelimiter > 0) { //rješava slučajeve zaredanih separatora |||...
+        if (!deliminator && p != size-1 && exp[p+1] == KLEEN) p++;
+        if (exp[p] == deliminator && !escape || !deliminator) {
+            if (p-len+!deliminator > 0) { //rješava slučajeve zaredanih separatora |||...
                 v.emplace_back(
-                    str+len, p-len+noDelimiter, false,
+                    exp+len, p-len+!deliminator, false,
                     deliminator == SEPARATOR ? HAS_JOIN : ATOMIC
                 );
                 if (!v.back().size) //rješava slučajeve prazne djece ()
                     v.pop_back();
                 else if (v.back().regex_type != ATOMIC && v.back().deliminator() == deliminator && !v.back().kleen) 
-                { //rjesšva se nepotrebnih zagraba izmedu operacija istog tipa
+                { //rješva se nepotrebnih zagraba izmedu operacija istog tipa
                     Regex _temp = std::move(v.back());
                     v.pop_back();
                     while (!_temp.subdivisions.empty()) {
@@ -200,14 +218,15 @@ bool Regex::vectorize_string (std::deque<Regex>& v, char* str, size_t size, char
             }
             len = p + 1;
         }
+        escape = false;
     }
     if (bracket_count) throw std::invalid_argument("improper bracket placement");
     if (include) throw std::invalid_argument("improper include statement");
     
-    if (size-len > 0 && v.size()) 
+    if (size-len > 0) 
     {
         v.emplace_back(
-            str+len, size-len, false,
+            exp+len, size-len, false,
             deliminator == SEPARATOR ? HAS_JOIN : ATOMIC
         );
         if (!v.back().size)
@@ -220,9 +239,11 @@ bool Regex::vectorize_string (std::deque<Regex>& v, char* str, size_t size, char
                 v.emplace_back(std::move(_temp.subdivisions.front()));
                 _temp.subdivisions.pop_front();
             }
+            _temp.is_root = false;
         }
     }
-    return has_delimiter;
+
+    if (!v.size()) size = 0;
 }
 
 
@@ -289,6 +310,12 @@ std::deque<Regex>::const_iterator Regex::end () const {
 char Regex::get() const {
     if (type() != ATOMIC) 
         throw std::invalid_argument("Regex must be ATOMIC to call!");
+    if (is_special) {
+        if (exp[1] == '_') return ' ';
+        if (exp[1] == 'n') return '\n';
+        if (exp[1] == 't') return '\t';
+        return exp[1];
+    }
     return exp[0];
 }
 

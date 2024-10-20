@@ -5,9 +5,9 @@
 #include<unordered_set>
 #include<vector>
 #include<queue>
-#include"Utils.hpp"
+#include<iostream>
 
-struct NKA 
+class NKA 
 { 
     using ID = uint32_t;
     using sym = char;
@@ -16,23 +16,59 @@ struct NKA
 
     static const sym EPS = 0;
 
-private:
     struct State;
     std::vector<State> states;
     ID start, end;
+
     mutable bool is_accept = false;
     mutable Set<ID> currentState;
+
     struct State {
         std::map<sym, Set<ID>> next;
         Set<ID> e_neighborhood;
+        bool kleen = false;
         bool evaluated;
         bool optimized;
         bool acceptable;
     };
 
 public:
+    NKA() {}
+
+    NKA(const char* str) : NKA((Regex)str) {}
+
+    NKA(const std::string& str) : NKA((Regex)str) {}
 
     NKA(const Regex& regex) {
+        *this = regex;
+    }
+
+    NKA(const NKA& atm) {
+        *this = atm;
+    }
+    NKA(NKA&& atm) noexcept {
+        *this = std::move(atm);
+    }
+
+    void operator= (const char* str) {
+        *this = Regex(str);
+    }
+
+    void operator= (const std::string& str) {
+        *this = Regex(str);
+    }
+
+    void operator= (const NKA& regex) {
+        states = regex.states;
+        start = regex.start, end = regex.end;
+    }
+    void operator= (NKA&& regex) noexcept {
+        states = std::move(regex.states);
+        start = regex.start, end = regex.end;
+    }
+
+    void operator= (const Regex& regex) {
+        states.clear();
         start = make_state();
         end = parseRegex(regex, start);
     }
@@ -50,9 +86,12 @@ public:
                 return true;
         return false;
     }
-
 private:
     State& get(ID id) {
+        return states[id];
+    }
+
+    const State& get(ID id) const {
         return states[id];
     }
 
@@ -73,6 +112,10 @@ private:
         else 
             get(s1).next[s].insert(s2);
     }
+
+    const Set<ID>& get_eps_neighbors(ID state) const {
+        return get(state).e_neighborhood;
+    } 
     
     Set<ID>& get_eps_neighbors(ID state) {
 
@@ -151,6 +194,7 @@ private:
         }
 
         if (regex.has_kleen()) {
+            get(return_state).kleen = true;
             link(return_state, state);
             return_state = state;
         }

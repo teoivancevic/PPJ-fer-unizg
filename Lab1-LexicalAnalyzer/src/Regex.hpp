@@ -5,6 +5,7 @@
 #include<cstring>
 #include<memory>
 #include<unordered_map>
+#include"Utils.hpp"
 
 static char SEPARATOR = '|'; 
 static char KLEEN = '*'; 
@@ -51,9 +52,10 @@ private:
     int collapsed = 0; //brojać ugnježđenih zagrada
     
     //zastavice
-    bool kleen;
+    bool kleen = false;
     bool is_root = false;
-    bool is_str_const;
+    bool is_str_const = false;
+    bool is_special = false;
 
 public:
     //default konstruktor
@@ -116,8 +118,8 @@ public:
     //---------JAVNE METODE-----------//
 
 private:
-    void assertType();
-    static bool vectorize_string (std::deque<Regex>& v, char* str, size_t size, char deliminator = 0);
+    void assertType(Type type = HAS_SEPARATOR);
+    void vectorize_string (char deliminator);
 };
 
 /*printanje regexa
