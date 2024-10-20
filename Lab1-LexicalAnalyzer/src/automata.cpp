@@ -1,4 +1,3 @@
-#pragma once
 #include"automata.hpp"
 
 NKA::NKA() {}
