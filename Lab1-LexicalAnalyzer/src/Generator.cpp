@@ -51,6 +51,7 @@ public:
         State state;
         ReadState phase = HEADER;
         int id = -1;
+        bool first = true;
 
         #define GEN_IN (read_stdin ? std::cin : in), line
         #define GEN_OUT (write_stdout ? std::cout : this->out)
@@ -70,7 +71,11 @@ public:
                     Regex::saved[fst] = line;
 
                 else if (fst[0] == '%')
-                    consumeEachWord(line, [this, fst](std::string&& word) {
+                    consumeEachWord(line, [this, fst, &first](std::string&& word) mutable {
+                        if (first) {
+                            GEN_OUT <<indent <<set_start(word.c_str()) <<std::endl;
+                            first = false;
+                        }
                         GEN_OUT <<indent <<(fst[1] == 'X' ? add_state(word.c_str()) : add_symbol(word.c_str())) <<std::endl;
                     });
 
