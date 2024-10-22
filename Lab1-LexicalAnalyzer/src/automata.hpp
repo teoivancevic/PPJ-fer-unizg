@@ -7,8 +7,11 @@
 #include<queue>
 #include<iostream>
 
-class NKA 
-{ 
+class NKA { 
+public:
+    std::string name;
+    std::vector<std::string> commands;
+
     using ID = uint32_t;
     using sym = char;
     template<typename T>
@@ -16,6 +19,7 @@ class NKA
 
     static const sym EPS = 0;
 
+private:
     struct State;
     std::vector<State> states;
     ID start, end;

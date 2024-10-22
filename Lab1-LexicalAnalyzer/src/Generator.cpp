@@ -2,6 +2,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include "filegen_defs.hpp"
+#include "Utils.hpp"
 #include "Regex.hpp"
 
 /* kako koristiti:
@@ -15,53 +17,50 @@
     Niz stanja analizatora i imena lex jedinki također su dostupna pod imenom "states" i "lex" 
 */
 
-class Generator {
-public:
-    struct Entry {
-        std::string regex;
-        std::string name;
-        std::vector<std::string> args;
-    };
-
+class Generator 
+{
     using State = std::string;
+    using ID = uint32_t;
 
     template<typename T>
     using Container = std::vector<T>;
-
-    std::unordered_map<State, Container<Entry>> automata;
-    Container<State> states;
-    Container<std::string> lex;
-
-private:
 
     enum ReadState {
         HEADER,
         BODY
     };
 
-    std::ifstream file;
+    std::ifstream in;
+    std::ofstream out;
     bool read_stdin = false;
+    bool write_stdout = false;
 
 public:
 
-    Generator() {
-        read_stdin = true;
-    }
-
-    Generator(const std::string& inputStream) {
-        file = std::ifstream(inputStream);
+    Generator(const std::string& inputStream = "cin", const std::string& outStream = "") {
+        if (inputStream != "cin") in = std::ifstream(inputStream);
+        else write_stdout = true;
+        if (outStream.empty()) out = std::ofstream(file_no_extension(inputStream) + ".hpp");
+        else if (outStream != "cout") out = std::ofstream(outStream);
+        else read_stdin = true;
     }
 
     void generate() 
     {
         std::string line;
+        State state;
+        ReadState phase = HEADER;
+        int id = -1;
 
-        #define GEN_IN_L read_stdin ? std::cin : file, line
+        #define GEN_IN (read_stdin ? std::cin : in), line
+        #define GEN_OUT (write_stdout ? std::cout : this->out)
+        
+        GEN_OUT <<CPP_BEGIN <<std::endl;
 
-        if (read_stdin || file.is_open()) 
+        if (read_stdin || in.is_open()) 
         {
             std::string fst;
-            while (getline(GEN_IN_L))
+            while (getline(GEN_IN))
             {
                 if (line.empty()) return;
 
@@ -72,37 +71,36 @@ public:
 
                 else if (fst[0] == '%')
                     consumeEachWord(line, [this, fst](std::string&& word) {
-                        auto& c = fst[1] == 'X' ? this->states : this->lex;
-                        c.emplace_back(word);
+                        GEN_OUT <<indent <<(fst[1] == 'X' ? add_state(word.c_str()) : add_symbol(word.c_str())) <<std::endl;
                     });
 
                 if (fst[1] == 'L') break;
             }
 
-            State state;
-            Entry* atm;
-            ReadState phase = HEADER;
-
-            while (getline(GEN_IN_L)) 
+            while (getline(GEN_IN)) 
             {
                 if (line.empty()) return;
                 
                 if (phase == BODY) {
                     fst = readNextWord(line);
                     if (fst[0] == '}') phase = HEADER;
-                    else atm->args.emplace_back(line);
+                    else out <<indent <<add_command(id, line.c_str()) <<std::endl;
                 } else {
                     fst = consumeNextWord(line, '>');
                     state = fst.substr(1, fst.size()-1);
-                    automata[state].emplace_back();
-                    atm = &automata[state].back();
-                    atm->regex = Regex(consumeNextWord(line));
-                    getline(GEN_IN_L); getline(GEN_IN_L);
-                    atm->name = line;
+                    GEN_OUT <<indent <<add_automata(state.c_str(), ++id) <<std::endl;
+                    std::string regex = Regex(consumeNextWord(line));
+                    GEN_OUT <<indent <<init_automata(id, convert_to_raw(regex).c_str()) <<std::endl;
+                    getline(GEN_IN); getline(GEN_IN);
+                    GEN_OUT <<indent <<set_name(id, line.c_str()) <<std::endl;
                     phase = BODY;
                 }
             }
-            if (!read_stdin) file.close();
+
+            GEN_OUT <<CPP_END <<std::endl;
+
+            if (!read_stdin) in.close();
+            if (!write_stdout) out.close();
         }
         else 
             std::cerr << "Unable to open file or stream!" << "\n";
