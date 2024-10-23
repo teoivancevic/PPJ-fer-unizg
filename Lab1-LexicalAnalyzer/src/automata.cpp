@@ -1,5 +1,7 @@
 #include"automata.hpp"
 
+//konstructs and assigns
+
 NKA::NKA() {}
 
 NKA::NKA(const char* str) : NKA((Regex)str) {}
@@ -28,30 +30,56 @@ void NKA::operator= (const std::string& str) {
 void NKA::operator= (const NKA& regex) {
     states = regex.states;
     start = regex.start, end = regex.end;
+    reset();
 }
 void NKA::operator= (NKA&& regex) noexcept {
     states = std::move(regex.states);
     start = regex.start, end = regex.end;
+    reset();
 }
 
 void NKA::operator= (const Regex& regex) {
     states.clear();
     start = make_state();
     end = parseRegex(regex, start);
+    reset();
 }
 
-bool NKA::evaluate (const std::string& str) {
-    currentState.clear();
-    currentState = get_eps_neighbors(start);
-    for (sym s : str) {
-        if (currentState.empty())
-            return false;
-        currentState = bad_consume(currentState, s);
-    }
-    for (ID state : currentState)
-        if (get(state).acceptable)
-            return true;
-    return false;
+//PUBLIC members
+
+size_t NKA::size () {
+    return states.size();
+}
+
+bool NKA::eval (const std::string& str) {
+    reset();
+    bool ret;
+    for (sym s : str) ret = push_sym(s);
+    reset();
+    return ret;
+}
+
+const NKA::Set<NKA::ID>& NKA::currentState() const {
+    return stack.front();
+}
+
+bool NKA::push_sym (sym s) {
+    
+    stack.emplace_back(consume(currentState(), s));
+    
+    return is_accept = std::count_if(currentState().begin(), currentState().end(), 
+        [this](ID id){
+            return this->get(id).acceptable;    
+        });
+}
+
+void NKA::pop_sym () {
+    stack.pop_back();
+}
+
+void NKA::reset() {
+    stack.clear();
+    stack.emplace_back(get_eps_neighbors(start));
 }
 
 NKA::State& NKA::get(ID id) {
@@ -74,11 +102,28 @@ NKA::ID NKA::add(ID state, sym s) {
 }
 
 void NKA::link(ID s1, ID s2, sym s) {
+    while (states.size() <= s1 || states.size() <= s2)
+        make_state();
     if (s == EPS)
         get(s1).e_neighborhood.insert(s2);
     else 
         get(s1).next[s].insert(s2);
 }
+
+const NKA::Set<NKA::ID>& NKA::get_transitions(ID id, sym s) {
+    if (s == EPS) return get(id).e_neighborhood;
+    else return get(id).next.at(s);
+}
+
+NKA::Set<NKA::sym> NKA::get_transition_symbols(ID id) {
+    Set<sym> ret;
+    if (!get(id).e_neighborhood.empty()) ret.insert(EPS);
+    for (auto& p : get(id).next)
+        ret.insert(p.first);   
+    return ret;
+}
+
+//PRIVATE members
 
 const NKA::Set<NKA::ID>& NKA::get_eps_neighbors(ID state) const {
     return get(state).e_neighborhood;
@@ -115,7 +160,7 @@ void NKA::remove_eps_transitions(ID state, sym s) {
     get(state).optimized = true;
 
     Set<ID>& eps = get_eps_neighbors(state);
-    get(state).next[s] = bad_consume(eps, s);
+    get(state).next[s] = consume(eps, s);
 
     eps.clear();
 }    
@@ -124,18 +169,9 @@ NKA::Set<NKA::ID> NKA::consume(const Set<ID>& set, sym s) {
     Set<ID> rez;
 
     for (ID state : set) {
-        if (state != start) remove_eps_transitions(state, s);
+        // if (state != start) remove_eps_transitions(state, s);
         make_set_union(rez, get(state).next[s]);
     }
-
-    return unionize(rez);
-}
-
-NKA::Set<NKA::ID> NKA::bad_consume(const Set<ID>& set, sym s) {
-    Set<ID> rez;
-
-    for (ID state : set)
-        make_set_union(rez, get(state).next[s]);
 
     return unionize(rez);
 }
@@ -168,3 +204,5 @@ NKA::ID NKA::parseRegex (const Regex& regex, ID state) {
     
     return return_state;
 }
+
+const NKA::sym NKA::EPS = 0;

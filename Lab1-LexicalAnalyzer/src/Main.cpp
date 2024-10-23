@@ -6,18 +6,13 @@
 using std::cin;
 using std::cout;
 
-using namespace resources;
+// using namespace resources;
 
 //ako nađeš bug javi
 int main () {
 
-    // Regex reg = R"(\\|\n|\")";
-    // cout <<reg;
-
-    // init();
-
+    // resources::init();
     // cin.get();
-
-    // Generator g("minus_lang.txt", "tablica.hpp");
-    // g.generate();
+    Generator g("minus_lang.txt", "tablica.hpp");
+    g.generate();
 }

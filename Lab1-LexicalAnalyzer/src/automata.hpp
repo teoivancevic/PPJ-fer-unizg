@@ -6,8 +6,9 @@
 #include<vector>
 #include<queue>
 #include<iostream>
+#include<algorithm>
 
-class NKA { 
+class NKA {
 public:
     std::string name;
     std::vector<std::string> commands;
@@ -17,15 +18,15 @@ public:
     template<typename T>
     using Set = std::unordered_set<T>;
 
-    static const sym EPS = 0;
-
+    static const sym EPS;
+    ID start, end;
+    
 private:
     struct State;
     std::vector<State> states;
-    ID start, end;
 
     mutable bool is_accept = false;
-    mutable Set<ID> currentState;
+    mutable std::vector<Set<ID>> stack;
 
     struct State {
         std::map<sym, Set<ID>> next;
@@ -37,6 +38,7 @@ private:
     };
 
 public:
+
     NKA();
 
     NKA(const char* str);
@@ -57,9 +59,15 @@ public:
 
     void operator= (const Regex& regex);
 
-    bool evaluate (const std::string& str);
-private:
-    State& get(ID id);
+    size_t size();
+
+    const Set<ID>& currentState() const;
+
+    bool eval (const std::string& str);
+
+    bool push_sym (sym s);
+
+    void pop_sym ();
 
     const State& get(ID id) const;
 
@@ -68,6 +76,15 @@ private:
     ID add(ID state, sym s = EPS);
 
     void link(ID s1, ID s2, sym s = EPS);
+
+    void reset();
+
+    const Set<ID>& get_transitions(ID id, sym s = EPS);
+    Set<sym> get_transition_symbols(ID id);
+    
+private:
+
+    State& get(ID id);
 
     const Set<ID>& get_eps_neighbors(ID state) const;
     
@@ -78,8 +95,6 @@ private:
     void remove_eps_transitions(ID state, sym s);
     
     Set<ID> consume(const Set<ID>& set, sym s);
-
-    Set<ID> bad_consume(const Set<ID>& set, sym s);
 
     ID parseRegex (const Regex& regex, ID state);
 };
