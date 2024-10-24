@@ -8,6 +8,13 @@
 #include<iostream>
 #include<algorithm>
 
+/*
+    Koristi push_symbol da dodaješ simbole u automat, funkcija vraća je li novo stanje prihvatljivo ili ne
+    pop_symbol se vraća u prethodno stanje, reset se vraća u početno stanje
+    eval provjerava niz znakova odjednom i vraća se u početno stanje pri završetku (vjv manje korisno)
+    name i commands su javni članovi u kojima se nalaze informacije o pravilu koje automat predstavlja
+*/
+
 class NKA {
 public:
     std::string name;

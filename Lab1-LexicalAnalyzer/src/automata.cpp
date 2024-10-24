@@ -60,7 +60,7 @@ bool NKA::eval (const std::string& str) {
 }
 
 const NKA::Set<NKA::ID>& NKA::currentState() const {
-    return stack.front();
+    return stack.back();
 }
 
 bool NKA::push_sym (sym s) {
@@ -154,6 +154,7 @@ NKA::Set<NKA::ID> NKA::unionize (const Set<ID>& states) {
     return neighborhood;
 }
 
+//deprecated
 void NKA::remove_eps_transitions(ID state, sym s) {
     if (get(state).optimized) 
         return;
@@ -170,7 +171,7 @@ NKA::Set<NKA::ID> NKA::consume(const Set<ID>& set, sym s) {
 
     for (ID state : set) {
         // if (state != start) remove_eps_transitions(state, s);
-        make_set_union(rez, get(state).next[s]);
+        make_set_union(rez, get(state).next.at(s));
     }
 
     return unionize(rez);
