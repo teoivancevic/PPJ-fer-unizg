@@ -21,7 +21,6 @@
 
 class Generator 
 {
-friend NKA;
     using State = std::string;
     using ID = uint32_t;
 

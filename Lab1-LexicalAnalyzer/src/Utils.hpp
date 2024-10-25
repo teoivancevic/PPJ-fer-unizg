@@ -47,7 +47,7 @@ static std::string readNextWord (const std::string& str, int at = 0, char del = 
     std::string word;
     for (int i = at; i<str.size(); i++)
         if (str[i] == del)
-            return str.substr(0, i);
+            return str.substr(at, i);
     return str;
 }
 

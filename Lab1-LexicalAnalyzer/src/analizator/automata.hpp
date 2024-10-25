@@ -71,7 +71,7 @@ public:
 
     size_t size();
 
-    const Set<ID>& currentState() const;
+    const Set<ID>& currentState();
 
     bool eval (const std::string& str);
 
@@ -87,9 +87,9 @@ public:
 
     void link(ID s1, ID s2, sym s = EPS);
 
-    bool empty() const;
+    bool empty();
 
-    bool is_acc() const;
+    bool is_acc();
 
     void reset();
 
@@ -105,8 +105,6 @@ private:
     Set<ID>& get_eps_neighbors(ID state);
 
     Set<ID> unionize (const Set<ID>& states);
-
-    void remove_eps_transitions(ID state, sym s);
     
     Set<ID> consume(const Set<ID>& set, sym s);
 

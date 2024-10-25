@@ -3,6 +3,8 @@
 
 #include"table.hpp"
 #include<iostream>
+#include<fstream>
+#include<stdexcept>
 
 using namespace resources;
 
@@ -18,8 +20,8 @@ class Analyzer
     size_t size;
     const char* input;
 
-    int rowCounter = 0;
-    bool RowCounter_u = false;
+    int rowCounter = 1;
+    bool rowCounter_u = false;
     State state = START;
 
     enum ErrorType {
@@ -33,7 +35,7 @@ public:
     Analyzer (const std::string& exp) : size(exp.size()), input(exp.c_str()) {}
 
     int row() {
-        return rowCounter - RowCounter_u;
+        return rowCounter - rowCounter_u;
     }
 
     void analyze() 
@@ -41,10 +43,10 @@ public:
         for (; it < size; it++) 
         {
             char sym = input[it];
-            bool found = false, empty = false;
+            bool found = false, empty = true;
 
             for (ID id : TABLE[state]) {
-                if (!AUTOMATA[id].empty() && !AUTOMATA[id].is_acc()) {
+                if (!AUTOMATA[id].empty()) {
                     if (AUTOMATA[id].push_sym(sym)) {
                         if (!found) {
                             rule_f = true;
@@ -70,7 +72,7 @@ public:
                 
                 lastRead = it;
                 rule_f = false;
-                RowCounter_u = false;
+                rowCounter_u = false;
             }
         }
     }
@@ -84,7 +86,7 @@ private:
             std::string com = readNextWord(command);
 
             if (com == "NOVI_REDAK") 
-                RowCounter_u = ++rowCounter;
+                rowCounter_u = ++rowCounter;
             else if (com == "UDJI_U_STANJE")
                 state = readNextWord(command, 14);
             else if (com == "VRATI_SE") 
@@ -99,27 +101,40 @@ private:
         if (!rule_f) 
             error(UNKNOWN_EXPRESSION, row());
 
-        std::cout <<AUTOMATA[id].name <<" " <<row() <<" " <<it - lastRead + 1 <<std::endl;
+        if (AUTOMATA[id].name != "-") {
+            std::cout <<AUTOMATA[id].name <<" " <<row() <<" ";
+            print(lastRead + 1, it);
+            std::cout <<std::endl;
+        }
+    }
+
+    void print (int start, int end) {
+        while (start <= end) std::cout <<input[start++];
     }
 
     template <typename ...Args>
-    void error(ErrorType err, Args...) 
+    void error(ErrorType err, Args... args) 
     {
         if (err == UNKNOWN_EXPRESSION)
-            std::cerr << string_format("Unknown expression in line %d", Args...) <<std::endl;
+            std::cerr << string_format("Unknown expression in line %d", args...) <<std::endl;
         else if (err == UNKNOWN_COMMAND) 
-            throw new std::exception(string_format("Unknown command: %s", Args...))
+            throw std::invalid_argument(string_format("Unknown command: %s", args...));
         else 
-            throw new std::exception("Unknown Exception Has occured!");
+            throw std::invalid_argument("Unknown Exception Has occured!");
     }
 };
+
+using std::cin;
+using std::cout;
 
 int main () 
 {
     resources::init();
-    
+
+    std::ifstream file = std::ifstream("input.txt");
+
     std::string input = "", line;
-    while (std::getline(std::cin, line)) input += line;
+    while (std::getline(file, line)) input += line + "\n";
 
     Analyzer(input).analyze();
 }

@@ -63,7 +63,8 @@ bool NKA::eval (const std::string& str) {
     return ret;
 }
 
-const NKA::Set<NKA::ID>& NKA::currentState() const {
+const NKA::Set<NKA::ID>& NKA::currentState() {
+    if (stack.empty()) reset();
     return stack.back();
 }
 
@@ -86,11 +87,11 @@ void NKA::reset() {
     stack.emplace_back(get_eps_neighbors(start));
 }
 
-bool NKA::empty() const {
+bool NKA::empty() {
     return currentState().empty();
 }
 
-bool NKA::is_acc() const {
+bool NKA::is_acc() {
     return is_accept;
 }
 
@@ -124,7 +125,7 @@ void NKA::link(ID s1, ID s2, sym s) {
 
 const NKA::Set<NKA::ID>& NKA::get_transitions(ID id, sym s) {
     if (s == EPS) return get(id).e_neighborhood;
-    else return get(id).next.at(s);
+    else return get(id).next[s];
 }
 
 NKA::Set<NKA::sym> NKA::get_transition_symbols(ID id) {
@@ -166,24 +167,13 @@ NKA::Set<NKA::ID> NKA::unionize (const Set<ID>& states) {
     return neighborhood;
 }
 
-//deprecated
-void NKA::remove_eps_transitions(ID state, sym s) {
-    if (get(state).optimized) 
-        return;
-    get(state).optimized = true;
-
-    Set<ID>& eps = get_eps_neighbors(state);
-    get(state).next[s] = consume(eps, s);
-
-    eps.clear();
-}    
-
 NKA::Set<NKA::ID> NKA::consume(const Set<ID>& set, sym s) {
     Set<ID> rez;
 
     for (ID state : set) {
         // if (state != start) remove_eps_transitions(state, s);
-        make_set_union(rez, get(state).next.at(s));
+        if (get(state).next.count(s))
+            make_set_union(rez, get(state).next.at(s));
     }
 
     return unionize(rez);
