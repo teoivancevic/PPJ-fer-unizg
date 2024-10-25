@@ -1,7 +1,8 @@
-static const std::string CPP_BEGIN = R"a(
-#include"automata.hpp"
+static const std::string CPP_BEGIN = 
+R"a(#include"automata.hpp"
 
-namespace resources {
+namespace resources 
+{
     using State = std::string;
     using ID = uint32_t;
 
@@ -14,7 +15,8 @@ namespace resources {
     static std::map<State, Container<ID>> TABLE;
     static State START;
     
-    void init() {)a";
+    void init() 
+    {)a";
 
 #define indent "        "
 #define indent2 "            "
@@ -29,8 +31,7 @@ namespace resources {
 
 static const std::string CPP_END = 
 R"b(    }   
-}
-)b";
+})b";
 
 static std::string convert_to_raw (const std::string& str) {
     std::string rez = "";

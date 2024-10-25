@@ -1,4 +1,3 @@
-#define REGEX_INITIALIZABLE
 #include"automata.hpp"
 
 //konstructs and assigns
@@ -85,6 +84,14 @@ void NKA::pop_sym () {
 void NKA::reset() {
     stack.clear();
     stack.emplace_back(get_eps_neighbors(start));
+}
+
+bool NKA::empty() const {
+    return currentState().empty();
+}
+
+bool NKA::is_acc() const {
+    return is_accept;
 }
 
 NKA::State& NKA::get(ID id) {

@@ -1,3 +1,4 @@
+#define REGEX_INITIALIZABLE
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -39,12 +40,19 @@ friend NKA;
 
 public:
 
-    Generator(const std::string& inputStream = "cin", const std::string& outStream = "") {
-        if (inputStream != "cin") in = std::ifstream(inputStream);
-        else write_stdout = true;
-        if (outStream.empty()) out = std::ofstream(file_no_extension(inputStream) + ".hpp");
-        else if (outStream != "cout") out = std::ofstream(outStream);
-        else read_stdin = true;
+    Generator(const std::string& inputStream = "cin", const std::string& outStream = "") 
+    {
+        if (inputStream != "cin") 
+            in = std::ifstream(inputStream);
+        else 
+            write_stdout = true;
+        
+        if (outStream.empty()) 
+            out = std::ofstream(file_no_extension(inputStream) + ".hpp");
+        else if (outStream != "cout") 
+            out = std::ofstream(outStream);
+        else 
+            read_stdin = true;
     }
 
     void generate() 
@@ -117,3 +125,10 @@ public:
             std::cerr << "Unable to open file or stream!" << "\n";
     }
 };
+
+int main () 
+{
+    std::string file;
+    std::cin >>file;
+    Generator(file, "analizator/table.hpp").generate();
+}

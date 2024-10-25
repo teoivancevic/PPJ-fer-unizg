@@ -57,7 +57,7 @@ public:
     NKA(const std::string& str);
 
     NKA(const Regex& regex);
-    
+
     void operator= (const Regex& regex);
     void operator= (const char* str);
     void operator= (const std::string& str);
@@ -86,6 +86,10 @@ public:
     ID add(ID state, sym s = EPS);
 
     void link(ID s1, ID s2, sym s = EPS);
+
+    bool empty() const;
+
+    bool is_acc() const;
 
     void reset();
 
