@@ -8,11 +8,16 @@
 
 using namespace resources;
 
+using std::cin;
+using std::cout;
+
 class Analyzer 
 {
     int it = 0;
     int lastFound = 0;
     int lastRead = 0;
+    int errorAt = -1;
+    int errorStart;
     
     int rule_f = false;
     ID rule;
@@ -42,8 +47,8 @@ public:
     {
         for (; it < size; it++) 
         {
-            char sym = input[it];
             bool found = false, empty = true;
+            char sym = input[it];
 
             for (ID id : TABLE[state]) {
                 if (!AUTOMATA[id].empty()) {
@@ -54,25 +59,41 @@ public:
                             found = true;
                         } else rule = std::min(rule, id);
                     }
-                    empty = false;
+                    empty &= AUTOMATA[id].empty();
                 }
-            }
-            
+            } 
+
             if (found) lastFound = it;
-            
+
             if (empty) 
             {
-                it = lastFound;
+                if (!rule_f) {
+                    if (errorAt != row()) {
+                        errorStart = lastRead + 1;
+                        errorAt = row();
+                    }
+                    lastRead++;
+                    it = lastRead;
+                } 
+                else 
+                {
+                    if (errorAt != -1) {
+                        error(UNKNOWN_EXPRESSION, get_exp(errorStart, lastRead).c_str(), errorAt);
+                        errorAt = -1;
+                    }
+                    
+                    it = lastFound;
+
+                    run(rule);
+                    store(rule);
+
+                    lastRead = it;
+                    rule_f = false;
+                    rowCounter_u = false;
+                }
                 
                 for (ID id : TABLE[state]) 
                     AUTOMATA[id].reset();
-                
-                run(rule);
-                store(rule);
-                
-                lastRead = it;
-                rule_f = false;
-                rowCounter_u = false;
             }
         }
     }
@@ -92,46 +113,39 @@ private:
             else if (com == "VRATI_SE") 
                 it = lastRead + to_int(readNextWord(command, 9));
             else 
-                error(UNKNOWN_COMMAND, com.c_str());
+                error(UNKNOWN_COMMAND, com.c_str(), id);
         }
     }
 
     void store (ID id) 
     {
-        if (!rule_f) 
-            error(UNKNOWN_EXPRESSION, row());
-
-        if (AUTOMATA[id].name != "-") {
-            std::cout <<AUTOMATA[id].name <<" " <<row() <<" ";
-            print(lastRead + 1, it);
-            std::cout <<std::endl;
-        }
+        if (AUTOMATA[id].name != "-")
+            cout <<AUTOMATA[id].name <<" " <<row() <<" " <<get_exp(lastRead + 1, it) <<std::endl;
     }
 
-    void print (int start, int end) {
-        while (start <= end) std::cout <<input[start++];
+    std::string get_exp (int start, int end) {
+        std::string exp = "";
+        while (start <= end) exp += input[start++];
+        return exp;
     }
 
     template <typename ...Args>
     void error(ErrorType err, Args... args) 
     {
         if (err == UNKNOWN_EXPRESSION)
-            std::cerr << string_format("Unknown expression in line %d", args...) <<std::endl;
+            std::cerr << string_format("Unknown expression: \"%s\" in line %d", args...) <<std::endl;
         else if (err == UNKNOWN_COMMAND) 
-            throw std::invalid_argument(string_format("Unknown command: %s", args...));
+            throw std::invalid_argument(string_format("Unknown command: \"%s\" in rule number: \"%d\"", args...));
         else 
             throw std::invalid_argument("Unknown Exception Has occured!");
     }
 };
 
-using std::cin;
-using std::cout;
-
 int main () 
 {
     resources::init();
 
-    std::ifstream file = std::ifstream("input.txt");
+    std::ifstream file = std::ifstream("input/simplePpjLang.in");
 
     std::string input = "", line;
     while (std::getline(file, line)) input += line + "\n";

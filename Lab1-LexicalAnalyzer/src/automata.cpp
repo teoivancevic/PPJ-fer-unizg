@@ -116,13 +116,13 @@ void NKA::link(ID s1, ID s2, sym s) {
 }
 
 const NKA::Set<NKA::ID>& NKA::get_transitions(ID id, sym s) {
-    if (s == EPS) return get(id).e_neighborhood;
+    if (s == EPS) return get_eps_neighbors(id);
     else return get(id).next.at(s);
 }
 
 NKA::Set<NKA::sym> NKA::get_transition_symbols(ID id) {
     Set<sym> ret;
-    if (!get(id).e_neighborhood.empty()) ret.insert(EPS);
+    if (get_eps_neighbors(id).size() > 1) ret.insert(EPS);
     for (auto& p : get(id).next)
         ret.insert(p.first);   
     return ret;
@@ -138,14 +138,16 @@ NKA::Set<NKA::ID>& NKA::get_eps_neighbors(ID state) {
 
     Set<ID>& neighborhood = get(state).e_neighborhood;
 
-    if (!get(state).evaluated) {
+    if (!get(state).evaluated) 
+    {
         get(state).evaluated = true;
+
         neighborhood = unionize(neighborhood);
-        if (neighborhood.count(end) || state == end)
+        neighborhood.insert(state);
+
+        if (neighborhood.count(end))
             get(state).acceptable = true;
     }
-
-    neighborhood.insert(state);
 
     return neighborhood;
 }
@@ -159,23 +161,10 @@ NKA::Set<NKA::ID> NKA::unionize (const Set<ID>& states) {
     return neighborhood;
 }
 
-//deprecated
-void NKA::remove_eps_transitions(ID state, sym s) {
-    if (get(state).optimized) 
-        return;
-    get(state).optimized = true;
-
-    Set<ID>& eps = get_eps_neighbors(state);
-    get(state).next[s] = consume(eps, s);
-
-    eps.clear();
-}    
-
 NKA::Set<NKA::ID> NKA::consume(const Set<ID>& set, sym s) {
     Set<ID> rez;
 
     for (ID state : set) {
-        // if (state != start) remove_eps_transitions(state, s);
         make_set_union(rez, get(state).next.at(s));
     }
 
@@ -185,7 +174,7 @@ NKA::Set<NKA::ID> NKA::consume(const Set<ID>& set, sym s) {
 #ifdef REGEX_INITIALIZABLE
 NKA::ID NKA::parseRegex (const Regex& regex, ID state) {
     ID return_state;
-    
+
     switch (regex.type())
     {
     case Regex::HAS_SEPARATOR:
@@ -196,7 +185,7 @@ NKA::ID NKA::parseRegex (const Regex& regex, ID state) {
     case Regex::HAS_JOIN:
         return_state = state;
         for (const Regex& r : regex) 
-            return_state = parseRegex(r, add(return_state));
+            return_state = parseRegex(r, return_state);
         break;
     case Regex::ATOMIC:
         return_state = add(state, regex.get());

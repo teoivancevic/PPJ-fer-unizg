@@ -102,8 +102,6 @@ private:
 
     Set<ID> unionize (const Set<ID>& states);
 
-    void remove_eps_transitions(ID state, sym s);
-    
     Set<ID> consume(const Set<ID>& set, sym s);
 
     #ifdef REGEX_INITIALIZABLE

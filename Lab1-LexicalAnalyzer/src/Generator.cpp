@@ -127,7 +127,7 @@ public:
 
 int main () 
 {
-    std::string file;
-    std::cin >>file;
-    Generator(file, "analizator/table.hpp").generate();
+    // std::string file;
+    // std::cin >>file;
+    Generator("input/simplePpjLang.lan", "analizator/table.hpp").generate();
 }

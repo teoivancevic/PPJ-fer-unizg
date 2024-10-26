@@ -112,7 +112,7 @@ void Regex::assertType(Type type) {
     case ATOMIC:
         if (exp[0] == '\\') is_special = true;
 
-        if (exp[size-1] == KLEEN) { //kolapsiraj sve kleenove u jedan ako ih ima
+        if (exp[size-1] == KLEEN && !is_special) { //kolapsiraj sve kleenove u jedan ako ih ima
             while (exp[size-1] == KLEEN) size--;
             kleen = true;
         }
