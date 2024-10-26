@@ -57,7 +57,7 @@ public:
     NKA(const std::string& str);
 
     NKA(const Regex& regex);
-    
+
     void operator= (const Regex& regex);
     void operator= (const char* str);
     void operator= (const std::string& str);
@@ -71,7 +71,7 @@ public:
 
     size_t size();
 
-    const Set<ID>& currentState() const;
+    const Set<ID>& currentState();
 
     bool eval (const std::string& str);
 
@@ -87,6 +87,10 @@ public:
 
     void link(ID s1, ID s2, sym s = EPS);
 
+    bool empty();
+
+    bool is_acc();
+
     void reset();
 
     const Set<ID>& get_transitions(ID id, sym s = EPS);
@@ -101,7 +105,7 @@ private:
     Set<ID>& get_eps_neighbors(ID state);
 
     Set<ID> unionize (const Set<ID>& states);
-
+    
     Set<ID> consume(const Set<ID>& set, sym s);
 
     #ifdef REGEX_INITIALIZABLE

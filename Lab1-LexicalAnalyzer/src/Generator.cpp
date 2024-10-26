@@ -1,3 +1,4 @@
+#define REGEX_INITIALIZABLE
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -5,6 +6,7 @@
 #include "filegen_defs.hpp"
 #include "Utils.hpp"
 #include "Regex.hpp"
+#include "automata.hpp"
 
 /* kako koristiti:
     samo stvori prazan generator ako želiš standard ulaz
@@ -37,12 +39,19 @@ class Generator
 
 public:
 
-    Generator(const std::string& inputStream = "cin", const std::string& outStream = "") {
-        if (inputStream != "cin") in = std::ifstream(inputStream);
-        else write_stdout = true;
-        if (outStream.empty()) out = std::ofstream(file_no_extension(inputStream) + ".hpp");
-        else if (outStream != "cout") out = std::ofstream(outStream);
-        else read_stdin = true;
+    Generator(const std::string& inputStream = "cin", const std::string& outStream = "") 
+    {
+        if (inputStream != "cin") 
+            in = std::ifstream(inputStream);
+        else 
+            write_stdout = true;
+        
+        if (outStream.empty()) 
+            out = std::ofstream(file_no_extension(inputStream) + ".hpp");
+        else if (outStream != "cout") 
+            out = std::ofstream(outStream);
+        else 
+            read_stdin = true;
     }
 
     void generate() 
@@ -94,8 +103,12 @@ public:
                     fst = consumeNextWord(line, '>');
                     state = fst.substr(1, fst.size()-1);
                     GEN_OUT <<indent <<add_automata(state.c_str(), ++id) <<std::endl;
-                    std::string regex = Regex(consumeNextWord(line));
-                    GEN_OUT <<indent <<init_automata(id, convert_to_raw(regex).c_str()) <<std::endl;
+                    NKA nka = consumeNextWord(line);
+                    for (ID id1 = 0; id1 < nka.size(); id1++) 
+                        for (char s : nka.get_transition_symbols(id1))
+                            for (ID id2 : nka.get_transitions(id1, s))
+                                if (id1 != id2) GEN_OUT <<indent2 <<link_state(id, id1, id2, s) <<std::endl;
+                    GEN_OUT <<indent <<set_start_end(id, nka.start, nka.end) <<std::endl;
                     getline(GEN_IN); getline(GEN_IN);
                     GEN_OUT <<indent <<set_name(id, line.c_str()) <<std::endl;
                     phase = BODY;
@@ -111,3 +124,10 @@ public:
             std::cerr << "Unable to open file or stream!" << "\n";
     }
 };
+
+int main () 
+{
+    // std::string file;
+    // std::cin >>file;
+    Generator("cin", "analizator/table.hpp").generate();
+}

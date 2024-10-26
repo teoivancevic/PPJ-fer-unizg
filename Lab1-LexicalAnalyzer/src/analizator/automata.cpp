@@ -1,4 +1,3 @@
-#define REGEX_INITIALIZABLE
 #include"automata.hpp"
 
 //konstructs and assigns
@@ -64,7 +63,8 @@ bool NKA::eval (const std::string& str) {
     return ret;
 }
 
-const NKA::Set<NKA::ID>& NKA::currentState() const {
+const NKA::Set<NKA::ID>& NKA::currentState() {
+    if (stack.empty()) reset();
     return stack.back();
 }
 
@@ -85,6 +85,14 @@ void NKA::pop_sym () {
 void NKA::reset() {
     stack.clear();
     stack.emplace_back(get_eps_neighbors(start));
+}
+
+bool NKA::empty() {
+    return currentState().empty();
+}
+
+bool NKA::is_acc() {
+    return is_accept;
 }
 
 NKA::State& NKA::get(ID id) {
@@ -116,13 +124,13 @@ void NKA::link(ID s1, ID s2, sym s) {
 }
 
 const NKA::Set<NKA::ID>& NKA::get_transitions(ID id, sym s) {
-    if (s == EPS) return get_eps_neighbors(id);
-    else return get(id).next.at(s);
+    if (s == EPS) return get(id).e_neighborhood;
+    else return get(id).next[s];
 }
 
 NKA::Set<NKA::sym> NKA::get_transition_symbols(ID id) {
     Set<sym> ret;
-    if (get_eps_neighbors(id).size() > 1) ret.insert(EPS);
+    if (!get(id).e_neighborhood.empty()) ret.insert(EPS);
     for (auto& p : get(id).next)
         ret.insert(p.first);   
     return ret;
@@ -138,16 +146,14 @@ NKA::Set<NKA::ID>& NKA::get_eps_neighbors(ID state) {
 
     Set<ID>& neighborhood = get(state).e_neighborhood;
 
-    if (!get(state).evaluated) 
-    {
+    if (!get(state).evaluated) {
         get(state).evaluated = true;
-
         neighborhood = unionize(neighborhood);
-        neighborhood.insert(state);
-
-        if (neighborhood.count(end))
+        if (neighborhood.count(end) || state == end)
             get(state).acceptable = true;
     }
+
+    neighborhood.insert(state);
 
     return neighborhood;
 }
@@ -165,7 +171,9 @@ NKA::Set<NKA::ID> NKA::consume(const Set<ID>& set, sym s) {
     Set<ID> rez;
 
     for (ID state : set) {
-        make_set_union(rez, get(state).next.at(s));
+        // if (state != start) remove_eps_transitions(state, s);
+        if (get(state).next.count(s))
+            make_set_union(rez, get(state).next.at(s));
     }
 
     return unionize(rez);
@@ -174,7 +182,7 @@ NKA::Set<NKA::ID> NKA::consume(const Set<ID>& set, sym s) {
 #ifdef REGEX_INITIALIZABLE
 NKA::ID NKA::parseRegex (const Regex& regex, ID state) {
     ID return_state;
-
+    
     switch (regex.type())
     {
     case Regex::HAS_SEPARATOR:
@@ -185,7 +193,7 @@ NKA::ID NKA::parseRegex (const Regex& regex, ID state) {
     case Regex::HAS_JOIN:
         return_state = state;
         for (const Regex& r : regex) 
-            return_state = parseRegex(r, return_state);
+            return_state = parseRegex(r, add(return_state));
         break;
     case Regex::ATOMIC:
         return_state = add(state, regex.get());

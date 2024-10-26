@@ -5,10 +5,37 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Launch",
+            "name": "(gdb) Launch Lex",
+            "preLaunchTask": "C/C++: g++ analyze",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/../bin/${fileBasenameNoExtension}",
+            "program": "${workspaceFolder}/../bin/Analyzer",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/analizator",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        
+        {
+            "name": "(gdb) Launch Gen",
+            "preLaunchTask": "C/C++: g++ generate",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/../bin/Generator",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
