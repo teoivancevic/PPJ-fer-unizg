@@ -44,14 +44,14 @@ public:
         if (inputStream != "cin") 
             in = std::ifstream(inputStream);
         else 
-            write_stdout = true;
+            read_stdin = true;
         
         if (outStream.empty()) 
             out = std::ofstream(file_no_extension(inputStream) + ".hpp");
         else if (outStream != "cout") 
             out = std::ofstream(outStream);
         else 
-            read_stdin = true;
+            write_stdout = true;
     }
 
     void generate() 
@@ -129,5 +129,5 @@ int main ()
 {
     // std::string file;
     // std::cin >>file;
-    Generator("cin", "analizator/table.hpp").generate();
+    Generator("input/state_hopper.lan", "analizator/table.hpp").generate();
 }

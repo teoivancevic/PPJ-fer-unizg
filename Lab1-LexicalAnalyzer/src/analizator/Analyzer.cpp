@@ -145,10 +145,10 @@ int main ()
 {
     resources::init();
 
-    // std::ifstream file = std::ifstream("input/ppjLang_tezi.in");
+    std::ifstream file = std::ifstream("input/state_hopper.in");
 
     std::string input = "", line;
-    while (std::getline(std::cin, line)) input += line + "\n";
+    while (std::getline(file, line)) input += line + "\n";
 
     Analyzer(input).analyze();
 }

@@ -204,7 +204,7 @@ void Regex::vectorize_string (char deliminator) {
                     exp+len, p-len+!deliminator, false,
                     deliminator == SEPARATOR ? HAS_JOIN : ATOMIC
                 );
-                if (!v.back().size) //rješava slučajeve prazne djece ()
+                if (!v.back().size && deliminator == JOIN) //rješava slučajeve prazne djece ()
                     v.pop_back();
                 else if (v.back().regex_type != ATOMIC && v.back().deliminator() == deliminator && !v.back().kleen) 
                 { //rješva se nepotrebnih zagraba izmedu operacija istog tipa
@@ -229,7 +229,7 @@ void Regex::vectorize_string (char deliminator) {
             exp+len, size-len, false,
             deliminator == SEPARATOR ? HAS_JOIN : ATOMIC
         );
-        if (!v.back().size)
+        if (!v.back().size && deliminator == JOIN)
             v.pop_back();
         else if (v.back().regex_type != ATOMIC && v.back().deliminator() == deliminator && !v.back().kleen) 
         {
@@ -243,7 +243,10 @@ void Regex::vectorize_string (char deliminator) {
         }
     }
 
-    if (!v.size()) size = 0;
+    if (!v.size()) { 
+        size = 0;
+        regex_type = ATOMIC;
+    }
 }
 
 
@@ -310,7 +313,10 @@ std::deque<Regex>::const_iterator Regex::end () const {
 char Regex::get() const {
     if (type() != ATOMIC) 
         throw std::invalid_argument("Regex must be ATOMIC to call!");
-    if (is_special) {
+    if (!size) 
+        return 0;
+    else if (is_special) 
+    {
         if (exp[1] == '_') return ' ';
         if (exp[1] == 'n') return '\n';
         if (exp[1] == 't') return '\t';
