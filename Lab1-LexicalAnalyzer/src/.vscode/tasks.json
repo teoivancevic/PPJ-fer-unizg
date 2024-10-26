@@ -9,7 +9,7 @@
                 "-g",
                 "${workspaceFolder}/*.cpp",
                 "-o",
-                "${workspaceFolder}/../bin/${fileBasenameNoExtension}"
+                "${workspaceFolder}/../bin/Generator"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -32,10 +32,10 @@
                 "-g",
                 "${workspaceFolder}/analizator/*.cpp",
                 "-o",
-                "${workspaceFolder}/../bin/${fileBasenameNoExtension}"
+                "${workspaceFolder}/../bin/Analyzer"
             ],
             "options": {
-                "cwd": "${workspaceFolder}"
+                "cwd": "${workspaceFolder}/analizator"
             },
             "problemMatcher": [
                 "$gcc"
@@ -44,7 +44,8 @@
                 "kind": "build",
                 "isDefault": false
             },
-            "detail": "Run analyzer"
+            "detail": "Run analyzer",
+            "dependsOn": "C/C++: g++ generate"
         }
     ],
     "version": "2.0.0"

@@ -14,8 +14,8 @@ using std::cout;
 class Analyzer 
 {
     int it = 0;
-    int lastFound = 0;
-    int lastRead = 0;
+    int lastFound;
+    int lastRead = -1;
     int errorAt = -1;
     int errorStart;
     
@@ -145,10 +145,10 @@ int main ()
 {
     resources::init();
 
-    std::ifstream file = std::ifstream("input/simplePpjLang.in");
+    // std::ifstream file = std::ifstream("input/ppjLang_tezi.in");
 
     std::string input = "", line;
-    while (std::getline(file, line)) input += line + "\n";
+    while (std::getline(std::cin, line)) input += line + "\n";
 
     Analyzer(input).analyze();
 }
