@@ -129,5 +129,6 @@ int main ()
 {
     // std::string file;
     // std::cin >>file;
-    Generator("input/state_hopper.lan", "analizator/table.hpp").generate();
+    // Generator("input/state_hopper.lan", "analizator/table.hpp").generate();
+    Generator("cin", "analizator/table.hpp").generate();
 }
