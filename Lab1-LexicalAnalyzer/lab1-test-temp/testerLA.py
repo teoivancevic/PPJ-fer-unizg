@@ -46,7 +46,7 @@ if TEST_DISCORD:
         # subprocess.run(["g++", "generator.cpp", "-o", "generator"])
         # subprocess.run(["g++", "Generator.cpp", "automata.cpp", "Regex.cpp", "", "-o", "generator"])
         cpp_files = glob.glob("*.cpp")
-        subprocess.run(["g++"] + cpp_files +["-std=c++17","-O2", "-W" ,"-Wall","-o","generator"])
+        subprocess.run(["g++"] + cpp_files +["-std=c++17","-O2","-o","generator"])
 
         file = open(lang, "r")
         subprocess.run(["./generator"], stdin=file, text=True)
@@ -58,7 +58,7 @@ if TEST_DISCORD:
 
         # subprocess.run(["g++", "analizator.cpp", "automat.cpp", "-o", "analizator"])
         cpp_files = glob.glob("*.cpp")
-        subprocess.run(["g++"] + cpp_files +["-std=c++17","-O2", "-W" ,"-Wall","-o","analizator"])
+        subprocess.run(["g++"] + cpp_files +["-std=c++17","-O2","-o","analizator"])
 
         subprocess.run(
             ["./analizator"], stdin=file, stdout=file2, stderr=subprocess.DEVNULL
@@ -120,8 +120,8 @@ if TEST_INTRANET:
         # subprocess.run(["g++", "generator.cpp", "-o", "generator"])
         # subprocess.run(["g++", "Generator.cpp", "automata.cpp", "Regex.cpp", "", "-o", "generator"])
         cpp_files = glob.glob("*.cpp")
-        #subprocess.run(["g++"] + cpp_files +["-std=c++17","-O2", "-W" ,"-Wall","-o","generator"])
-        subprocess.run(["g++"] + cpp_files +["-o","generator"])
+        subprocess.run(["g++"] + cpp_files +["-std=c++17","-O2","-o","generator"])
+        # subprocess.run(["g++"] + cpp_files +["-o","generator"])
 
         file = open(lang, "r")
         subprocess.run(["./generator"], stdin=file, text=True)
@@ -133,8 +133,8 @@ if TEST_INTRANET:
 
         # subprocess.run(["g++", "analizator.cpp", "automat.cpp", "-o", "analizator"])
         cpp_files = glob.glob("*.cpp")
-        # subprocess.run(["g++"] + cpp_files +["-std=c++17","-O2", "-W" ,"-Wall","-o","analizator"])
-        subprocess.run(["g++"] + cpp_files +["-o","analizator"])
+        subprocess.run(["g++"] + cpp_files +["-std=c++17","-O2","-o","analizator"])
+        # subprocess.run(["g++"] + cpp_files +["-o","analizator"])
 
         subprocess.run(
             ["./analizator"], stdin=file, stdout=file2, stderr=subprocess.DEVNULL
