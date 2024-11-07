@@ -1,0 +1,10 @@
+S_poc
+atm:S_poc
+lnk:0 1 97
+end:0 1
+name:A
+atm:S_poc
+lnk:0 1 10
+end:0 1
+name:-
+cmd:NOVI_REDAK

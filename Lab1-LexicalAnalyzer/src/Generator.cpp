@@ -104,15 +104,13 @@ public:
                     for (ID id1 = 0; id1 < nka.size(); id1++) 
                         for (char s : nka.get_transition_symbols(id1))
                             for (ID id2 : nka.get_transitions(id1, s))
-                                if (id1 != id2) GEN_OUT <<"lnk:" <<id1 <<" " <<id2 <<" " <<s <<std::endl;
+                                if (id1 != id2) GEN_OUT <<"lnk:" <<id1 <<" " <<id2 <<" " <<(int)s <<std::endl;
                     GEN_OUT <<"end:" <<nka.start <<" " <<nka.end <<std::endl;
                     getline(GEN_IN); getline(GEN_IN);
                     GEN_OUT <<"name:" <<line <<std::endl;
                     phase = BODY;
                 }
             }
-
-            GEN_OUT <<CPP_END <<std::endl;
 
             if (!read_stdin) in.close();
             if (!write_stdout) out.close();
