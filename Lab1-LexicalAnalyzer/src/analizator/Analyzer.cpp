@@ -1,15 +1,25 @@
-#if defined __has_include
-#if __has_include ("table.txt")
+// #if defined __has_include
+// #if __has_include ("table.txt")
 
-#include"table.hpp"
+#include"automata.hpp"
 #include<iostream>
 #include<fstream>
 #include<stdexcept>
 
-using namespace resources;
-
 using std::cin;
 using std::cout;
+
+using State = std::string;
+using ID = uint32_t;
+
+template<typename T>
+using Container = std::vector<T>;
+
+static Container<State> STATES;
+static Container<std::string> SYMBOLS;
+static std::map<ID, NKA> AUTOMATA;
+static std::map<State, Container<ID>> TABLE;
+static State START;
 
 class Analyzer 
 {
@@ -141,17 +151,47 @@ private:
     }
 };
 
+void init() 
+{
+    std::ifstream IN("tablica.txt");
+
+    std::string line;
+    std::getline(IN, line);
+    START = line;
+    int id = -1;
+
+    while (getline(IN, line)) {
+        std::string prefix = consumeNextWord(line, ':');
+
+        if (prefix == "atm") 
+            TABLE[readNextWord(line)].push_back(++id);
+        else if (prefix == "lnk")
+            AUTOMATA[id].link(
+                to_int(consumeNextWord(line)), 
+                to_int(consumeNextWord(line)), 
+                to_int(consumeNextWord(line))
+            );
+        else if (prefix == "end")
+            AUTOMATA[id].start = to_int(consumeNextWord(line)),
+            AUTOMATA[id].end = to_int(consumeNextWord(line));
+        else if (prefix == "cmd") 
+            AUTOMATA[id].commands.emplace_back(line);
+        else if (prefix == "name") {
+            AUTOMATA[id].name = std::move(line);
+        }
+    }
+
+    IN.close();
+}
+
 int main () 
 {
-    resources::init();
-
-    //std::ifstream file = std::ifstream("input/state_hopper.in");
+    init();
 
     std::string input = "", line;
-    // while (std::getline(file, line)) input += line + "\n";
     while (std::getline(std::cin, line)) input += line + "\n";
 
     Analyzer(input).analyze();
 }
-#endif
-#endif
+// #endif
+// #endif
