@@ -1,5 +1,5 @@
 #if defined __has_include
-#if __has_include ("table.hpp")
+#if __has_include ("table.txt")
 
 #include"table.hpp"
 #include<iostream>

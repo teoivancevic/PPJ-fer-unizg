@@ -64,8 +64,6 @@ public:
 
         #define GEN_IN (read_stdin ? std::cin : in), line
         #define GEN_OUT (write_stdout ? std::cout : this->out)
-        
-        GEN_OUT <<CPP_BEGIN <<std::endl;
 
         if (read_stdin || in.is_open()) 
         {
@@ -82,10 +80,9 @@ public:
                 else if (fst[0] == '%')
                     consumeEachWord(line, [this, fst, &first](std::string&& word) mutable {
                         if (first) {
-                            GEN_OUT <<indent <<set_start(word.c_str()) <<std::endl;
+                            GEN_OUT <<word <<std::endl;
                             first = false;
                         }
-                        GEN_OUT <<indent <<(fst[1] == 'X' ? add_state(word.c_str()) : add_symbol(word.c_str())) <<std::endl;
                     });
 
                 if (fst[1] == 'L') break;
@@ -98,19 +95,19 @@ public:
                 if (phase == BODY) {
                     fst = readNextWord(line);
                     if (fst[0] == '}') phase = HEADER;
-                    else out <<indent <<add_command(id, line.c_str()) <<std::endl;
+                    else out <<"cmd:" <<line <<std::endl;
                 } else {
                     fst = consumeNextWord(line, '>');
                     state = fst.substr(1, fst.size()-1);
-                    GEN_OUT <<indent <<add_automata(state.c_str(), ++id) <<std::endl;
+                    GEN_OUT <<"atm:" <<state <<std::endl;
                     NKA nka = consumeNextWord(line);
                     for (ID id1 = 0; id1 < nka.size(); id1++) 
                         for (char s : nka.get_transition_symbols(id1))
                             for (ID id2 : nka.get_transitions(id1, s))
-                                if (id1 != id2) GEN_OUT <<indent2 <<link_state(id, id1, id2, s) <<std::endl;
-                    GEN_OUT <<indent <<set_start_end(id, nka.start, nka.end) <<std::endl;
+                                if (id1 != id2) GEN_OUT <<"lnk:" <<id1 <<" " <<id2 <<" " <<s <<std::endl;
+                    GEN_OUT <<"end:" <<nka.start <<" " <<nka.end <<std::endl;
                     getline(GEN_IN); getline(GEN_IN);
-                    GEN_OUT <<indent <<set_name(id, line.c_str()) <<std::endl;
+                    GEN_OUT <<"name:" <<line <<std::endl;
                     phase = BODY;
                 }
             }
