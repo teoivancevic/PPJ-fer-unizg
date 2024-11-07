@@ -153,7 +153,7 @@ private:
 
 void init() 
 {
-    std::ifstream IN("tablica.txt");
+    std::ifstream IN("table.txt");
 
     std::string line;
     std::getline(IN, line);
@@ -165,12 +165,10 @@ void init()
 
         if (prefix == "atm") 
             TABLE[readNextWord(line)].push_back(++id);
-        else if (prefix == "lnk")
-            AUTOMATA[id].link(
-                to_int(consumeNextWord(line)), 
-                to_int(consumeNextWord(line)), 
-                to_int(consumeNextWord(line))
-            );
+        else if (prefix == "lnk") {
+            int a = to_int(consumeNextWord(line)), b = to_int(consumeNextWord(line)), c = to_int(consumeNextWord(line));
+            AUTOMATA[id].link(a, b, c);
+        }
         else if (prefix == "end")
             AUTOMATA[id].start = to_int(consumeNextWord(line)),
             AUTOMATA[id].end = to_int(consumeNextWord(line));
