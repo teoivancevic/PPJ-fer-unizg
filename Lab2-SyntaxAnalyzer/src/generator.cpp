@@ -2,8 +2,9 @@
 #include <fstream>
 #include <string>
 #include <vector>
-#include <map>
-#include <set>
+// #include <map>
+// #include <set>
+#include "Utils.hpp"
 
 using namespace std;
 
@@ -11,8 +12,8 @@ using namespace std;
 const string file_path = "../test/lab2_teza/19lr1/test.san";
 
 
-using State = string;
-using Symbol = string;
+// using State = string;
+// using Symbol = string;
 
 class LR1Item {
 public:
@@ -63,29 +64,106 @@ public:
     // string getConflictReport() const;
 };
 
-class eNKA {
-public:
-    struct State {
-        int id;
-        set<LR1Item> items;
-        map<string, set<int> > transitions;  // includes epsilon transitions
+class DKA;
+
+// struct State {
+    //     int id;
+    //     set<LR1Item> items;
+    //     map<string, set<int> > transitions;  // includes epsilon transitions
         
-        bool operator==(const State& other) const;
-    };
+    //     bool operator==(const State& other) const;
+    // };
+class eNKA {
+    
 
-    eNKA(const Grammar& grammar) : grammar(grammar), initial_state_id(0) {
-        createInitialState(); // LR1 stavka iz produkcije s novim pocetnim znakom
+    friend DKA;
+    //using Item = LR1Item;
+    //nema potrebe stvarati state struct pogotovo ako ga stavis u vector
+    using State = int;
+    using Symbol = char; //I think? Ili je string? Ako je char onda makni const &
+    template<typename T>
+    using StateMap = map<State, T>;
+
+    // StateMap<LR1Item> items; // vilim
+    set<LR1Item> items; // teo
+    // StateMap<map<Symbol, set<State>>> transitions;
+    map<pair<LR1Item, Symbol>, set<LR1Item> > transitions;
+    // set<State> start; // vilim
+    set<LR1Item> start;
+    // mutable set<State> currentState; // vilim
+    set<LR1Item> currentState;
+
+public:
+    
+
+    eNKA() {} //kada je definiran drugi konstruktor default se treba definirati eksplicitno
+
+    eNKA(const Grammar& grammar) : grammar(grammar){
+        //TODO
+        string q0 = grammar.BEGIN_STATE;
+        LR1Item item_q0 = LR1Item(q0, {}, grammar.PRODUKCIJE[q0][0], "$"); // ovo smije biti ovako po uputama labosa
+        start.insert(item_q0);
+        items.insert(item_q0);
+        // start = closure(start);
+        currentState = start;
+
+
+        // TODO: teo dal trebam iz states pazit da ne dodam ovo stanje u enka
+        // q0 -> S dot, $
+        // prvo zelim napraviti "closure" za pocetno stanje
+        for(auto grammarBegin: grammar.STATES){  // za svako nezavrsno stanje gramatike
+            for(auto production: grammar.PRODUKCIJE[grammarBegin]){ // prodji kroz sve produkcije iz tog stanja
+                for(int i = 0; i < production.size(); i++){ // za svaku produkciju prodji kroz sve znakove desne strane produkcije
+                    vector<string> before_dot = {};
+                    vector<string> after_dot = production; // cijela desna strana produkcije
+                    
+                    LR1Item item = LR1Item(grammarBegin, {}, after_dot, "$");
+                    items.insert(item); // dodaj to stanje u skup stanja zao "root stanje" za taj odvojeni ogranak
+                    string nextStateTrans = after_dot[0];
+
+                    while (after_dot.empty() == false){
+                        before_dot.push_back(after_dot[0]);
+                        after_dot.erase(after_dot.begin());
+                        LR1Item nextItem = LR1Item(grammarBegin, before_dot, after_dot, "$");
+                        transitions[make_pair(item, nextStateTrans)].insert(nextItem);
+
+                        // epsiloni iz stanja item u sva okolna
+                        set<LR1Item> epsilonTransitions = computeEpsilonTransitions(nextItem);
+                        for(auto epsilonTransition: epsilonTransitions){
+                            transitions[make_pair(item, "")].insert(epsilonTransition);
+                            items.insert(epsilonTransition); // todo: teo note: ovo potencijalno beskorisno
+                        }
+
+                        item = nextItem;
+                        items.insert(item);
+                    }
+                    
+                    
+                }
+            }
+            
+        }
+
+        
+
+
     }
 
-    void createInitialState(){
-        // create initial state
-
+    void update (const Symbol& sym) const {
+        //TODO
     }
 
-    void buildFromGrammar();
-    // todo: vidit je li ovo potrebno
-    // const vector<State>& getStates() const;
-    // int getInitialStateId() const;
+    void reset () const {
+        //TODO
+    }
+
+    set<Symbol> get_transitions(const set<State>& states) const {
+        //TODO
+    }
+
+    set<State> get_next(const set<State>& current, const Symbol& sym) const {
+        //TODO
+    }
 
 private:
     const Grammar& grammar;
@@ -93,29 +171,78 @@ private:
     int initial_state_id;
 
     set<LR1Item> closure(const set<LR1Item>& items);
-    set<LR1Item> computeEpsilonTransitions(const LR1Item& item);
-    int findStateId(const set<LR1Item>& items);
-    int addState(const set<LR1Item>& items);
+    // set<LR1Item> computeEpsilonTransitions(const LR1Item& item);
+    set<LR1Item> computeEpsilonTransitions(LR1Item item){
+        set<LR1Item> result;
+        queue<LR1Item> q;
+        q.push(item);
+        while (!q.empty()) {
+            LR1Item current = q.front();
+            q.pop();
+            result.insert(current); // TODO: teo note: ovo ce dodati sve sudjedne u epsilon okolini, ali ce dodati i originalni item, nez dal to zelimo
+            if (current.after_dot.empty()) continue;
+            Symbol next = current.after_dot[0];
+            if (grammar.STATES.count(next)) { // ako je nezavrsni znak prvi desni nakon dot-a
+                for (const auto& production : grammar.PRODUKCIJE.at(next)) {
+                    LR1Item next_item = LR1Item(next, {}, production, current.lookahead);
+                    if (!result.count(next_item)) q.push(next_item); 
+                    // todo: teo note: mislim da ce se s ovom linijom gore dodati svi sudjedni u epsilon okolini
+                    // ali, mi ne radimo epsilon okolinu, nego samo epsilon prijelaze iz item u susjedne kojima je lijevo next i before_dot prazan
+                }
+            }
+        }
+        return result;
+
+    }
+    //int findStateId(const set<LR1Item>& items);
+    State addState();
 };
 
-class DKA {
+class DKA 
+{
+    friend eNKA;
+    using Item = set<LR1Item>;
+    using State = int;
+    using Symbol = char;
+    template<typename T>
+    using StateMap = map<State, T>;
+
+    StateMap<Item> items;
+    StateMap<map<Symbol, State>> transitions;
+    State start;
+    mutable State currentState;
+
 public:
-    struct State {
-        int id;
-        set<LR1Item> items;
-        map<string, int> transitions;
-    };
+    DKA() {}
+    DKA(const eNKA& enka) 
+    {
+        enka.reset();
+        SetMap<State> mapper;
+        queue<set<State>> state_queue;
+        state_queue.push(enka.start);
+        State ID = 0;
+        mapper[enka.start] = ID++;
 
-    DKA(const eNKA& enka);
-    void convertFromENKA();
-    const vector<State>& getStates() const;
-    int getInitialStateId() const;
+        while (!state_queue.empty()) 
+        {
+            set<State> current = std::move(state_queue.front());
+            State id = mapper[current];    
+            state_queue.pop();
 
-private:
-    const eNKA& enka;
-    vector<State> states;
-    int initial_state_id;
-    map<set<int>, int> subset_map;
+            for (State state : current)
+                items[id].insert(enka.items.at(state));
+                
+            for (Symbol sym : enka.get_transitions(current)) 
+            {
+                set<State> next = enka.get_next(current, sym);
+                if (!mapper.count(next)) {
+                    transitions[id][sym] = ID;
+                    mapper[next] = ID++;
+                    state_queue.emplace(std::move(next));
+                }
+            }
+        }
+    }    
 };
 
 
