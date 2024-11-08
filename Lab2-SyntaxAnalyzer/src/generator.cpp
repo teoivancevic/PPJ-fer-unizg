@@ -4,6 +4,14 @@
 
 int main () 
 {   
+    SetMap<int> m;
+    m[{1, 2, 3}] = 1;
+    m[{1, 3, 2}] = 2;
+    m[{1, 2, 3, 4}] = 3;
+    m[{4, 1, 2, 3}] = 4;
+    m[{1, 2}] = 5;
+
+    cin.get();
     //ne treba biti global var
     // const std::string file_path = "../test/lab2_teza/19lr1/test.san";
 

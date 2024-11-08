@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "preLaunchTask": "build Gen",
-            "program": "${workspaceFolder}/GEN",
+            "program": "${workspaceFolder}/GEN.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",

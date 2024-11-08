@@ -9,7 +9,7 @@
                 "-g",
                 "*.cpp",
                 "-o",
-                "${fileDirname}/GEN"
+                "${fileDirname}/GEN.exe"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
