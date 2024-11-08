@@ -5,6 +5,10 @@
             "label": "build Gen",
             "command": "g++",
             "args": [
+                "-W",
+                "-Wall",
+                "-O2",
+                "-std=c++2a",
                 "-fdiagnostics-color=always",
                 "-g",
                 "*.cpp",

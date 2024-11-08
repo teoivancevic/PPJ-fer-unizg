@@ -1,22 +1,27 @@
 #include <iostream>
 #include <fstream>
 #include "Utils.hpp"
+#include "Automat.hpp"
+#include "Grammar.hpp"
 
 int main () 
 {   
-    SetMap<int> m;
-    m[{1, 2, 3}] = 1;
-    m[{1, 3, 2}] = 2;
-    m[{1, 2, 3, 4}] = 3;
-    m[{4, 1, 2, 3}] = 4;
-    m[{1, 2}] = 5;
+    //probaj inspectat s debuggerom (vrlo je cool)
+    map<LR1Item, int> m;
+    m[{"a", {}, {"a", "b", "c"}, "b"}] = 0;
+    m[{"a", {}, {"a", "c", "b"}, "b"}] = 1;
+    m[{"a", {}, {"a", "b", "c"}, "a"}] = 2;
+    m[{"b", {}, {"a", "b", "c"}, "b"}] = 3;
+    m[{"a", {"a"}, {"a", "b", "c"}, "b"}] = 4;
+    m[{"a", {}, {"a", "b", "c"}, "b"}] = 5;
 
-    cin.get();
+    // cin.get();
+    
     //ne treba biti global var
-    // const std::string file_path = "../test/lab2_teza/19lr1/test.san";
+    const std::string file_path = "../test/lab2_teza/19lr1/test.san";
 
     // korak 1 - parsiranje gramatike
-    // Grammar grammar(file_path);
+    Grammar grammar(file_path);
     
     // korak 2 - dodajemo novi pocetni znak (zasto ovo nije u konstruktoru?)
     // grammar.dodajNoviPocetniZnak();

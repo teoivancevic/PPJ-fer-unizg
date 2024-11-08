@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Utils.hpp"
 #include "Grammar.hpp"
 
@@ -24,6 +26,7 @@ public:
     mutable State startState;
 
 public:
+    //eps okolina od startState
     set<State>& start() const {
         return transitions[startState][eps];
     }
@@ -33,15 +36,14 @@ public:
     eNKA(const Grammar& grammar)
     {
         //(note): pazi kad koristis at() a kada operator[] s mapama!
+        //at() koristi kada god je moguće aka. kada postoji zapis i samo ga citas
 
         const Symbol& S = grammar.BEGIN_SYMBOL; //S je prikladnija oznaka za simbol od q0
         startState = newState({S, {}, grammar.PRODUKCIJE.at(S)[0], eps});
 
-        //at() koristi kada god je moguće aka. kada postoji zapis i samo ga citas
-
         for(auto grammarBegin: grammar.NEZAVRSNI) // za svako nezavrsno stanje gramatike
         for(const auto& production: grammar.PRODUKCIJE.at(grammarBegin)) // prodji kroz sve produkcije iz tog stanja
-        for(int i = 0; i < production.size(); i++) // za svaku produkciju prodji kroz sve znakove desne strane produkcije
+        for(int i = 0; i < (int) production.size(); i++) // za svaku produkciju prodji kroz sve znakove desne strane produkcije
         { 
             vector<Symbol> before_dot = {};
             vector<Symbol> after_dot = production; // cijela desna strana produkcije
@@ -108,7 +110,7 @@ private:
             if (grammar.NEZAVRSNI.count(next)) // ako je nezavrsni znak prvi desni nakon dot-a
             { 
                 for (const auto& production : grammar.PRODUKCIJE.at(next)) {
-                    LR1Item next_item = LR1Item(next, {}, production, current.lookahead);
+                    LR1Item next_item {next, {}, production, current.lookahead};
                     if (!result.count(getState(next_item))) 
                         q.push(next_item); 
                 }
@@ -118,14 +120,16 @@ private:
         return result;
     }
 
+    //ovo se generalno ne bi trebalo koristit direktno kao ni states
     State newState(const LR1Item& item) {
         if (states.count(item)) {
-            printf("duplicate state: %s\n", item.toString()); //ne bi se trebalo dogoditi i think
+            printf("duplicate state: %s\n", item.toString().c_str()); //ne bi se trebalo dogoditi i think
             return -1;
         }
         return states[item] = ID++;
     }
 
+    //ovo ili vrati postojeci state il ga na pravi pa vrati
     State getState(const LR1Item& item) {
         if (states.count(item))
             return states[item];

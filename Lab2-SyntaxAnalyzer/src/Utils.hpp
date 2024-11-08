@@ -1,3 +1,5 @@
+#pragma once
+
 #include <string>
 #include <vector>
 #include <iostream>
@@ -30,9 +32,9 @@ using std::cin;
 using std::cout;
 using std::cerr;
 
-template <template <typename, typename...> class container, typename T, typename ...Args>
-struct std::hash<container<T, Args...>> {
-    std::size_t operator() (const container<T, Args...>& s) const {
+template <typename T>
+struct std::hash<set<T>> {
+    std::size_t operator() (const set<T>& s) const {
         std::size_t hash = 0;
         for (const T& elem : s) {
             hash ^= std::hash<T>()(elem) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
@@ -41,13 +43,13 @@ struct std::hash<container<T, Args...>> {
     }
 };
 
-template <template <typename, typename...> class container, typename T, typename ...Args>
-struct std::equal_to<container<T, Args...>> {
-    std::size_t operator() (const container<T, Args...>& s1, const container<T, Args...>& s2) const {
+template <typename T>
+struct std::equal_to<set<T>> {
+    std::size_t operator() (const set<T>& s1, const set<T>& s2) const {
         if (s1.size() != s2.size()) return false;
         bool equal = true;
         for (const T& elem : s1) {
-            equal &= s1.count(elem) == s2.count(elem);
+            equal &= s2.count(elem);
         }
         return equal;
     }

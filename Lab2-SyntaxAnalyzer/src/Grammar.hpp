@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Utils.hpp"
 #include <fstream>
 
@@ -16,24 +18,6 @@ public:
         //(note): mozda bolje drzat se engleskog TERMINATING
     set<Symbol> SYNC_ZAVRSNI; // sinkronizacijski zavrsni znakovi
     map<Symbol, vector<vector<Symbol>>> PRODUKCIJE;
-
-    //code duplication
-    Symbol readSymbol (const std::string line, set<Symbol>& container) {
-        Symbol symbolsString = line.substr(3, line.size()-3);
-
-        Symbol symbol = "";
-        for(auto c: symbolsString){
-            if(c == ' '){
-                container.emplace(symbol);
-                symbol = "";
-            }else{
-                symbol += c;
-            }
-        }
-        container.emplace(symbol);
-
-        return symbol;
-    }
 
     // parse input file
     Grammar(std::string filePath) 
@@ -91,6 +75,24 @@ public:
         } 
         else
             cerr << "Unable to open file\n";
+    }
+
+    //code duplication
+    Symbol readSymbol (const std::string line, set<Symbol>& container) {
+        Symbol symbolsString = line.substr(3, line.size()-3);
+
+        Symbol symbol = "";
+        for (auto c: symbolsString) {
+            if (c == ' ') {
+                container.emplace(symbol);
+                symbol = "";
+            } else {
+                symbol += c;
+            }
+        }
+        container.emplace(symbol);
+
+        return symbol;
     }
 
     void dbgPrintFileLines () {
