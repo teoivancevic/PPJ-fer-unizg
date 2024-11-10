@@ -12,11 +12,6 @@
     naš kod. Umjesto tog koristi aliase kao ispod. 
 */
 
-//ovo bi vjv trebalo definirati lokalno u klasama, ali se koriste dovoljno često izvan klasa pa je ok
-using Symbol = std::string; //ovo treba razlikovati od std::string jer bi se trebalo koristiti samo u kontekstu gramatike (zato bi bilo bolje da je u klasi ali ok)
-using State = int;
-using Action = std::string; //--//--
-
 //možeš ovo tretirat ko obićnu mapu, sam je malo brže
 template <typename K, typename V, typename Hash = std::hash<K>, typename Compare = std::equal_to<K>>
 using map = std::unordered_map<K, V, Hash, Compare>;
@@ -28,9 +23,34 @@ using std::vector;
 using std::pair;
 using std::queue;
 
+//ovo bi vjv trebalo definirati lokalno u klasama, ali se koriste dovoljno često izvan klasa pa je ok
+using Symbol = std::string; //ovo treba razlikovati od std::string jer bi se trebalo koristiti samo u kontekstu gramatike (zato bi bilo bolje da je u klasi ali ok)
+using State = int;
+using Action = std::string; //--//--
+using Word = vector<Symbol>;
+
+static const Symbol eps = "$";
+static const Symbol end_sym = "$";
+
 using std::cin;
 using std::cout;
 using std::cerr;
+
+template<typename T>
+set<T> make_union(const set<T>& s1, const set<T>& s2) {
+    set<T> rez = s1;
+    for (const T& item : s2)
+        rez.emplace(item);
+    return rez;
+}
+
+template<typename T>
+vector<T> reverse (const vector<T>& vec) {
+    vector<T> rez;
+    for (int i=0; i<(int) production.size(); i++) 
+        rez.emplace_back(production[i]);
+    return rez;
+}
 
 template <typename T>
 struct std::hash<set<T>> {
@@ -80,54 +100,6 @@ struct std::hash<vector<T>> {
 
 template<typename T>
 using SetMap = map<set<T>, T>;
-
-//PROVJERI:
-struct LR1Item 
-{
-    Symbol left;               
-    vector<Symbol> before_dot;      
-    vector<Symbol> after_dot;        
-    Symbol lookahead;
-
-    //nema potrebe definirati konstruktor za ovakav struct (aggregate type)
-    
-    bool operator==(const LR1Item& other) const {
-        return left == other.left &&
-               before_dot == other.before_dot &&
-               after_dot == other.after_dot &&
-               lookahead == other.lookahead;
-    }
-    
-    bool operator<(const LR1Item& other) const {
-        if (left != other.left) return left < other.left;
-        if (before_dot != other.before_dot) return before_dot < other.before_dot;
-        if (after_dot != other.after_dot) return after_dot < other.after_dot;
-        return lookahead < other.lookahead;
-    }
-
-    //maknuo sam one cursed simbole sry, ak treba možeš vratit ali preferirao bi da izgleda ovako jer:
-    //ako koristis stvari koje nisu u basic ASCII tablici postoji dobra sansa da se nece uvjek dobro ispisat
-    std::string toString() const 
-    { 
-        std::string result = left + " -> ";
-        for (const auto& s : before_dot) result += s + " ";
-        result += ". ";
-        for (const auto& s : after_dot) result += s + " ";
-        result += ", " + lookahead;
-        return result;
-    }
-};
-
-template <>
-struct std::hash<LR1Item>
-{
-    std::size_t operator()(const LR1Item& k) const
-    {
-        return ((std::hash<Symbol>()(k.left)
-            ^ (std::hash<vector<Symbol>>()(k.before_dot) << 1)) >> 1)
-            ^ (std::hash<vector<Symbol>>()(k.after_dot) << 1);
-    }
-};
 
 //TODO:
 class ParsingTable {

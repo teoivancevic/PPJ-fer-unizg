@@ -11,7 +11,6 @@ class eNKA
     State ID = 0;
 
 public:
-    static const Symbol eps;
 
     template<typename T>
     using StateMap = map<State, T>;
@@ -22,12 +21,12 @@ public:
     mutable map<LR1Item, State> states; //pretvorba LR1Item -> State
     mutable StateMap<LR1Item> items;
     mutable StateMap<map<Symbol, set<State>>> transitions;
-    mutable set<Symbol> symbols;
+    mutable set<Symbol> symbols = {end_sym};
     mutable State startState;
 
 public:
     //eps okolina od startState
-    set<State>& start() const {
+    inline set<State>& start() const {
         return transitions[startState][eps];
     }
 
@@ -39,39 +38,24 @@ public:
         //at() koristi kada god je moguće aka. kada postoji zapis i samo ga citas
 
         const Symbol& S = grammar.BEGIN_SYMBOL; //S je prikladnija oznaka za simbol od q0
-        startState = newState({S, {}, grammar.PRODUKCIJE.at(S)[0], eps});
+        startState = newState({S, grammar.PRODUKCIJE.at(S)[0], {end_sym}}); //CHECK
 
-        for(auto grammarBegin: grammar.NEZAVRSNI) // za svako nezavrsno stanje gramatike
-        for(const auto& production: grammar.PRODUKCIJE.at(grammarBegin)) // prodji kroz sve produkcije iz tog stanja
-        for(int i = 0; i < (int) production.size(); i++) // za svaku produkciju prodji kroz sve znakove desne strane produkcije
+        for(const auto& [beginSymbol, productions] : grammar.PRODUKCIJE) // prodji kroz sve produkcije iz tog stanja
+        for(const Word& production : productions)
         { 
-            vector<Symbol> before_dot = {};
-            vector<Symbol> after_dot = production; // cijela desna strana produkcije
-
-            State state = getState({
-                grammarBegin, before_dot, after_dot, eps
-            });
+            LR1Item item (beginSymbol, production, {end_sym}); //CHECK
+            State state = getState(item);
             
             start().insert(state); // dodaj to stanje u skup stanja za "root stanje" za taj odvojeni ogranak
-            Symbol nextStateTrans = after_dot[0];
 
-            while (!after_dot.empty())
+            while (!item.isComplete())
             {
-                before_dot.push_back(after_dot[0]);
-                after_dot.erase(after_dot.begin());
+                const Symbol& nextSym = item.symbolAfterDot();
+                symbols.emplace(nextSym);
                 
-                LR1Item next_item = {
-                    grammarBegin, before_dot, after_dot, eps
-                };
-                State next_state = getState(next_item);
+                transitions[state][eps] = computeEpsilonTransitions(state, grammar);
 
-                transitions[state][nextStateTrans].insert(next_state);
-
-                // epsiloni iz stanja item u sva okolna
-                for(const State& epsilonTransition: computeEpsilonTransitions(next_item, grammar))
-                    transitions[state][eps].emplace(epsilonTransition);
-
-                state = next_state;
+                transitions[state][nextSym].insert(state = getState(item.shift_dot_r()));
             }      
         }
     }
@@ -88,29 +72,54 @@ public:
         return result;
     }
 
+    const set<State>& get_epsilon(State state, const Grammar& grammar)
+    {
+        if (!transitions.at(state).count(eps))
+            transitions.at(state)[eps] = computeEpsilonTransitions(state, grammar);
+        
+        return transitions.at(state).at(eps);
+    }
+
+    inline std::size_t size() {
+        return ID;
+    }
+
 private:
-    set<State> computeEpsilonTransitions(const LR1Item& item, const Grammar& grammar)
+    set<State> computeEpsilonTransitions(State state, const Grammar& grammar)
     {
         set<State> result;
+        
         queue<LR1Item> q;
-        q.push(item);
+        q.push(items[state]);
         
         while (!q.empty()) 
         {
             LR1Item current = q.front();
+            State state = getState(current);
             q.pop();
 
-            result.insert(getState(item)); // TODO: teo note: ovo ce dodati sve sudjedne u epsilon okolini, ali ce dodati i originalni item, nez dal to zelimo 
-                //(vilim note: zelimo)
+            result.insert(state);
             
-            if (current.after_dot.empty()) 
+            if (current.isComplete()) 
                 continue;
-            Symbol next = current.after_dot[0];
             
-            if (grammar.NEZAVRSNI.count(next)) // ako je nezavrsni znak prvi desni nakon dot-a
+            Symbol nextSymbol = current.symbolAfterDot();
+            current.shift_dot_r();
+            
+            if (grammar.PRODUKCIJE.count(nextSymbol))
             { 
-                for (const auto& production : grammar.PRODUKCIJE.at(next)) {
-                    LR1Item next_item {next, {}, production, current.lookahead};
+                for (const Word& production : grammar.PRODUKCIJE.at(nextSymbol)) 
+                {
+                    const Word& afterWord = current.after_dot;
+                    LR1Item next_item (
+                        nextSymbol, production, 
+                        make_union(
+                            grammar.startsWith(afterWord), 
+                            (grammar.isVanishing(afterWord) ? 
+                                current.lookahead : set<Symbol>{}
+                            )
+                        )
+                    );
                     if (!result.count(getState(next_item))) 
                         q.push(next_item); 
                 }
@@ -123,9 +132,10 @@ private:
     //ovo se generalno ne bi trebalo koristit direktno kao ni states
     State newState(const LR1Item& item) {
         if (states.count(item)) {
-            printf("duplicate state: %s\n", item.toString().c_str()); //ne bi se trebalo dogoditi i think
+            // printf("duplicate state: %s\n", item.toString().c_str()); //ne bi se trebalo dogoditi i think
             return -1;
         }
+        items[ID] = item;
         return states[item] = ID++;
     }
 
@@ -135,13 +145,7 @@ private:
             return states[item];
         return newState(item);
     }
-
-    std::size_t size() {
-        return ID;
-    }
 };
-
-const Symbol eNKA::eps = "$";
 
 class DKA 
 {
@@ -190,11 +194,19 @@ public:
         }
     }   
 
-    void reset();
+    inline void reset() const {
+        currentState = start;
+    }
 
-    bool update(const Symbol& sym);
+    inline void update(const Symbol& sym) const {
+        currentState = transitions.at(currentState).at(sym);
+    }
 
-    std::size_t size() {
+    inline const set<LR1Item>& items() const {
+        return items.at(currentState);
+    } 
+
+    inline std::size_t size() const {
         return ID;
     }
 };
