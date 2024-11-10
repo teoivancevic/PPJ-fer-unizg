@@ -25,39 +25,41 @@ public:
     mutable State startState;
 
 public:
-    //eps okolina od startState
-    inline set<State>& start() const {
-        return transitions[startState][eps];
-    }
-
     eNKA() {} //kada je definiran drugi konstruktor default se treba definirati eksplicitno
 
     eNKA(const Grammar& grammar)
     {
         //(note): pazi kad koristis at() a kada operator[] s mapama!
         //at() koristi kada god je moguće aka. kada postoji zapis i samo ga citas
+        symbols.emplace(grammar.BEGIN_SYMBOL);
 
-        const Symbol& S = grammar.BEGIN_SYMBOL; //S je prikladnija oznaka za simbol od q0
-        startState = newState({S, grammar.PRODUKCIJE.at(S)[0], {end_sym}}); //CHECK
-
-        for(const auto& [beginSymbol, productions] : grammar.PRODUKCIJE) // prodji kroz sve produkcije iz tog stanja
+        for(const auto& [leftSymbol, productions] : grammar.PRODUKCIJE) // prodji kroz sve produkcije
         for(const Word& production : productions)
         { 
-            LR1Item item (beginSymbol, production, {end_sym}); //CHECK
-            State state = getState(item);
+            LR1Item item (
+                leftSymbol, production, 
+                leftSymbol == grammar.BEGIN_SYMBOL ? 
+                    set<Symbol>{end_sym} : set<Symbol>{}
+            );
             
-            start().insert(state); // dodaj to stanje u skup stanja za "root stanje" za taj odvojeni ogranak
+            State state = getState(item);
+            if (leftSymbol == grammar.BEGIN_SYMBOL) 
+                startState = state;
 
             while (!item.isComplete())
             {
                 const Symbol& nextSym = item.symbolAfterDot();
                 symbols.emplace(nextSym);
-                
-                transitions[state][eps] = computeEpsilonTransitions(state, grammar);
 
+                transitions[state][eps] = computeEpsilonTransitions(state, grammar);
                 transitions[state][nextSym].insert(state = getState(item.shift_dot_r()));
             }      
         }
+    }
+
+    //eps okolina od startState
+    inline set<State>& start() const {
+        return transitions[startState][eps];
     }
 
     //ovo radi tek nakon sto se svi prijelazi izracunaju
