@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include "Utils.hpp"
-// #include "Automat.hpp"
+#include "Automat.hpp"
 #include "Grammar.hpp"
 
 //TODO:
@@ -13,13 +13,13 @@ public:
     map<pair<int, Symbol>, Action> akcija;  // (state, terminal) -> action
     map<pair<int, Symbol>, Action> novoStanje;  // (state, non-terminal) -> next state
     
-    ParsingTable(const DKA& dka, const Grammar& grammar){
+    ParsingTable (const DKA& dka, const Grammar& grammar){
         dka.reset();
         // set<LR1Item> items = dka.items();
 
         for (int id_curr = 0; id_curr < dka.size(); id_curr++) { // prolazim kroz stanja DKA
             const map<Symbol, State> &prijelazi = dka.transitions.at(id_curr); // dohvacam prijelaze trenutnog stanja
-            bool pomakIliStavi = false;
+            bool pomakIliStavi = false; // rjesava nejednoznacnost POMAKNI/REDUCIRAJ
 
             for (const auto& [simbol_prijelaza, novo_stanje_id] : prijelazi) { // prolazim kroz prijelaze stanja
                 if (grammar.ZAVRSNI.count(simbol_prijelaza)) { // ako je zavrsni znak
@@ -37,39 +37,70 @@ public:
 
 
             if (!pomakIliStavi) {
-                set<LR1Item> current_items = dka.getItems(id_curr);
+                set<LR1Item> current_items = dka.itemsAtState(id_curr);
                 
                 for (const auto& item : current_items) {
                     if (item.after_dot.empty()) {
                         if (item.left == grammar.BEGIN_SYMBOL && item.lookahead.count(end_sym)) {
                             // Accept case
+                            // S' -> s. {$}
                             akcija[{id_curr, end_sym}] = "PRIHVATI";
                         } else {
                             // Reduce case - store the actual production
-                            akcija[{id_curr, item.lookahead}] = Action(item.left, item.before_dot);
+                            // instead of actual production store id, from the order of input in grammar
+                            
+                            int prod_index = grammar.ID_PRODUKCIJE.at({item.left, item.before_dot});
+                            // TODO: rijesiti nejednoznacnost reduciraj/reduciraj
+                            // prioritet ima produkcija s manjim ID-jem produkcije
+                            if (prod_index != -1) {
+                                // Store just "REDUCIRAJ <index>"
+                                for (const auto& look : item.lookahead) {
+                                    akcija[{id_curr, look}] = "REDUCIRAJ " + std::to_string(prod_index);
+                                }
+                            }
+
+                            // "REDUCIRAJ j" --> j je id produkcije u gramatici
                         }
                     }
                 }
             }
 
 
-            // ako S' -> S. i $ je u lookahead ---> onda Prihvati() za (id_curr, $)
-                //     PRIHVATI prioriteti, pazit ako tocka na desnom mjestu.
-                //     edgevi vece prioriteti od onoga kj je u stanju
-                //     ako vise edgeva onda prioriteti
-                // ako A -> a. i B -> g je u lookahead ---> Reduciraj(A -> aBb)
+            
                 
+        }
 
-            // trans = svi prijelazi iz trenutnog stanja
-            // 
-        //}
+    }; 
 
-        throw "Not implemented";
-    }; // TODO: fixat ovo
+    // ako S' -> S. i $ je u lookahead ---> onda Prihvati() za (id_curr, $)
+        //     PRIHVATI prioriteti, pazit ako tocka na desnom mjestu.
+        //     edgevi vece prioriteti od onoga kj je u stanju
+        //     ako vise edgeva onda prioriteti
+        // ako A -> a. i B -> g je u lookahead ---> Reduciraj(A -> aBb)
 
-    void build();
+    // void build();
 
-    void outputToFile(const std::string& filename) const;
+    void outputToFile(const std::string& filename) const {
+        std::ofstream out(filename);
+        
+        out << "SYNC_SYMBOLS:\n";
+
+
+        out << "GRAMMAR_PRODUCTIONS:\n";
+
+
+        out << "AKCIJA:\n";
+        for (const auto& [key, value] : akcija) {
+            out << key.first << " " << key.second << " " << value << "\n";
+        }
+        
+        out << "NOVO STANJE:\n";
+        for (const auto& [key, value] : novoStanje) {
+            out << key.first << " " << key.second << " " << value << "\n";
+        }
+        
+        out.close();
+    }
 
 };
 
@@ -88,7 +119,8 @@ int main ()
     
     // korak 2 - dodajemo novi pocetni znak (zasto ovo nije u konstruktoru?)
     grammar.dodajNoviPocetniZnak(GRAMMAR_NEW_BEGIN_STATE);
-    if(DEBUG){
+    
+    if (DEBUG){
         grammar.dbgPrintFileLines();
         printf("\n");
         grammar.printInfo(); 

@@ -205,6 +205,10 @@ public:
         return items.at(currentState);
     } 
 
+    inline const set<LR1Item>& itemsAtState(State state) const {
+        return items.at(state);
+    } 
+
     inline std::size_t size() const {
         return ID;
     }
