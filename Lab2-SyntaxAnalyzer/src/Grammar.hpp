@@ -21,7 +21,7 @@ public:
     set<Symbol> SYNC_ZAVRSNI;
     map<Symbol, vector<Word>> PRODUKCIJE;
 
-    Grammar(const std::string& inputStream = "cin") 
+    Grammar(const std::string& inputStream/* = "cin"*/) //reference nemre imat default value
     {
         if(inputStream != "cin") 
             in = std::ifstream(inputStream);
@@ -103,8 +103,8 @@ public:
 
     bool startsWith (const Symbol& sym1, const Symbol& sym2) const 
     {
-        if (!PRODUKCIJE.count(sym1)) 
-            return sym2 == end_sym ? ZAVRSNI.count(sym1) : false;
+        if (sym1 == sym2) return true;
+        if (!PRODUKCIJE.count(sym1)) return false;
 
         for (const Word& produkcija : PRODUKCIJE.at(sym1))
             if (startsWith(produkcija, sym2)) 
@@ -115,8 +115,11 @@ public:
 
     bool startsWith (const Word& word, const Symbol& sym2) const 
     {
-        for (const Symbol& sym1 : word) 
+        //usklađeno radi obrnutosti LR1Stavka.after_dot vectora
+        for (int i = word.size() - 1; i>-1; i--) 
         {
+            const Symbol& sym1 = word[i];
+
             if (startsWith(sym1, sym2)) {
                 if (sym2 == end_sym) continue;
                 else return true;
@@ -138,15 +141,17 @@ public:
     }
 
     set<Symbol> startsWith (const Word& word) const 
-    {
+    {   
         set<Symbol> rez;
 
-        for (const Symbol& sym : word) {
-            make_union(rez, startsWith(sym));
-            if (!isVanishing(sym)) {
-                rez.erase(end_sym);
-                break;
-            }
+        //isto usklađeno...
+        for (int i = word.size() - 1; i>-1; i--) 
+        {
+            const Symbol& sym = word[i];
+
+            rez = make_union(rez, startsWith(sym));
+            
+            if (!isVanishing(sym)) break;
         }
         
         return rez;
@@ -155,11 +160,12 @@ public:
     set<Symbol> startsWith (const Symbol& sym) const 
     {
         if (!PRODUKCIJE.count(sym)) 
-            return ZAVRSNI.count(sym) ? set<Symbol>{sym} : set<Symbol>{end_sym};
+            return ZAVRSNI.count(sym) ? set<Symbol>{sym} : set<Symbol>{};
+        
         set<Symbol> rez;
 
         for (const Word& produkcija : PRODUKCIJE.at(sym))
-            make_union(rez, startsWith(produkcija));
+            rez = make_union(rez, startsWith(produkcija));
         
         return rez;
     }

@@ -8,7 +8,7 @@
 //PROVJERI:
 class eNKA 
 {
-    State ID = 1;
+    State ID = 0;
 
 public:
 
@@ -21,26 +21,30 @@ public:
     mutable map<LR1Item, State> states; //pretvorba LR1Item -> State
     mutable StateMap<LR1Item> items;
     mutable StateMap<map<Symbol, set<State>>> transitions;
-    mutable set<Symbol> symbols = {end_sym};
+    mutable set<Symbol> symbols;
     const State q0 = 0;
+    mutable set<State> currentState;
 
 public:
     eNKA() {} //kada je definiran drugi konstruktor default se treba definirati eksplicitno
 
     eNKA(const Grammar& grammar)
     {
+        queue<LR1Item> generator;
+        
         const Symbol& S = grammar.BEGIN_SYMBOL;
         symbols.emplace(S);
-        transitions.at(q0)[eps].insert(
-            newState(
-                {S, grammar.PRODUKCIJE.at(S).at(0), {end_sym}}
-            )
+        
+        //dodaje se jedina produkcija po pravilu a) iz skripte
+        generator.emplace(
+            S, grammar.PRODUKCIJE.at(S).at(0), set<Symbol>{end_sym}
         );
+        
+        while (!generator.empty()) 
+        {
+            LR1Item item = generator.front();
+            generator.pop();
 
-        for(const auto& [leftSymbol, productions] : grammar.PRODUKCIJE) // prodji kroz sve produkcije
-        for(const Word& production : productions)
-        { 
-            LR1Item item (leftSymbol, production);
             State state = getState(item);
 
             while (!item.isComplete())
@@ -48,18 +52,47 @@ public:
                 const Symbol& nextSym = item.symbolAfterDot();
                 symbols.emplace(nextSym);
 
-                transitions[state][eps] = computeEpsilonTransitions(state, grammar);
-                transitions[state][nextSym].insert(state = getState(item.shift_dot_r()));
-            }      
+                //beta je niz znakova iza sljedeceg simbola kao u skripti
+                const Word& beta = item.shift_dot_r().after_dot;
+                //T je lookahead kao u skripti
+                const set<Symbol> T = 
+                    make_union (
+                        grammar.startsWith(beta), 
+                        (grammar.isVanishing(beta) ? item.lookahead : set<Symbol>{})
+                    );
+
+                //dodajem produkcije po pravilu c) str 148 iz skripte
+                if (grammar.PRODUKCIJE.count(nextSym)) {
+                    for (const Word& production : grammar.PRODUKCIJE.at(nextSym)) 
+                    {
+                        LR1Item nextItem (nextSym, production, T);
+                        transitions[state][eps].insert(getState(nextItem));
+                        generator.push(std::move(nextItem));
+                    }
+                }
+                //dodajem produkciju po pravilu b) str 148 iz skripte
+                transitions[state][nextSym].insert(state = getState(item));
+            }    
         }
+
+        bool evaluated[ID] = {};
+        for (State state = q0; state < ID; state++)
+            computeEpsilonEnvironment(state, grammar, evaluated);
+        
+        currentState = start();
     }
 
-    //eps okolina od startState
+    //poc stanje
     inline set<State>& start() const {
         return transitions[q0][eps];
     }
 
-    //ovo radi tek nakon sto se svi prijelazi izracunaju
+    //eps okolina
+    set<State> eps_of(const set<State>& current) const {
+        return get_next(current, eps);
+    }
+
+    //prijelazi
     set<State> get_next(const set<State>& current, const Symbol& sym) const 
     {
         set<State> result;
@@ -71,61 +104,42 @@ public:
         return result;
     }
 
-    const set<State>& get_epsilon(State state, const Grammar& grammar)
-    {
-        if (!transitions.at(state).count(eps))
-            transitions.at(state)[eps] = computeEpsilonTransitions(state, grammar);
-        
-        return transitions.at(state).at(eps);
+    inline void reset() const {
+        currentState = start();
     }
+
+    inline void update(const Symbol& sym) const {
+        currentState = get_next(currentState, sym);
+    }
+
+    const set<LR1Item> get_items() const {
+        set<LR1Item> rez;
+        for (State state : currentState) 
+            rez.emplace(items[state]);
+        return rez;
+    } 
 
     inline std::size_t size() {
         return ID;
     }
 
 private:
-    set<State> computeEpsilonTransitions(State state, const Grammar& grammar)
+    set<State>& computeEpsilonEnvironment(State state, const Grammar& grammar, bool* evaluated)
     {
-        set<State> result;
-        
-        queue<LR1Item> q;
-        q.push(items[state]);
-        
-        while (!q.empty()) 
-        {
-            LR1Item current = q.front();
-            State state = getState(current);
-            q.pop();
+        set<State>& env = transitions[state][eps];
 
-            result.insert(state);
+        if (!evaluated[state]) 
+        {
+            evaluated[state] = true;
             
-            if (current.isComplete()) 
-                continue;
-            
-            Symbol nextSymbol = current.symbolAfterDot();
-            current.shift_dot_r();
-            
-            if (grammar.PRODUKCIJE.count(nextSymbol))
-            { 
-                for (const Word& production : grammar.PRODUKCIJE.at(nextSymbol)) 
-                {
-                    const Word& afterWord = current.after_dot;
-                    LR1Item next_item (
-                        nextSymbol, production, 
-                        make_union(
-                            grammar.startsWith(afterWord), 
-                            (grammar.isVanishing(afterWord) ? 
-                                current.lookahead : set<Symbol>{}
-                            )
-                        )
-                    );
-                    if (!result.count(getState(next_item))) 
-                        q.push(next_item); 
-                }
-            }
+            set<State> prev_env = transitions.at(state).at(eps);
+            for (State next : prev_env)
+                env = make_union(
+                    env, computeEpsilonEnvironment(next, grammar, evaluated)
+                );
         }
 
-        return result;
+        return env;
     }
 
     //ovo se generalno ne bi trebalo koristit direktno kao ni states
@@ -154,7 +168,7 @@ public:
     template<typename T>
     using StateMap = map<State, T>;
 
-// private:
+private:
     StateMap<set<LR1Item>> items;
     StateMap<map<Symbol, State>> transitions;
     State start;
@@ -201,7 +215,7 @@ public:
         currentState = transitions.at(currentState).at(sym);
     }
 
-    inline const set<LR1Item>& items() const {
+    inline const set<LR1Item>& get_items() const {
         return items.at(currentState);
     } 
 

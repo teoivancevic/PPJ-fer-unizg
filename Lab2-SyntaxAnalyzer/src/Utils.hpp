@@ -4,6 +4,7 @@
 #include <vector>
 #include <iostream>
 #include <unordered_map>
+#include <map>
 #include <set>
 #include <queue>
 
@@ -13,8 +14,9 @@
 */
 
 //možeš ovo tretirat ko obićnu mapu, sam je malo brže
-template <typename K, typename V, typename Hash = std::hash<K>, typename Compare = std::equal_to<K>>
-using map = std::unordered_map<K, V, Hash, Compare>;
+// template <typename K, typename V, typename Hash = std::hash<K>, typename Compare = std::equal_to<K>>
+// using map = std::unordered_map<K, V, Hash, Compare>;
+using std::map;
 
 //ovo su stvari koje često kostistimo pa je ok uvest ih iz namespacea, 
 //ali string namjerno nisam stavio da se sjetimo koristi aliase
@@ -47,7 +49,7 @@ set<T> make_union(const set<T>& s1, const set<T>& s2) {
 template<typename T>
 vector<T> reverse (const vector<T>& vec) {
     vector<T> rez;
-    for (int i=0; i<(int) vec.size(); i++) 
+    for (int i = vec.size() - 1; i>=0; i--) 
         rez.emplace_back(vec[i]);
     return rez;
 }
