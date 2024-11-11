@@ -4,6 +4,26 @@
 // #include "Automat.hpp"
 #include "Grammar.hpp"
 
+//TODO:
+class ParsingTable {
+public:
+
+    //(WARNING): varijable ne bi trebalo velkim slovom, ak možeš promjeni u camelCase
+    
+    map<pair<int, Symbol>, Action> Akcija;  // (state, terminal) -> action
+    map<pair<int, State>, int> NovoStanje;  // (state, non-terminal) -> next state
+    
+    // ParsingTable(const DKA& dka, const Grammar& grammar){
+    //     throw "Not implemented";
+    // }; // TODO: fixat ovo
+
+    void build();
+
+    void outputToFile(const std::string& filename) const;
+    // string getConflictReport() const;
+};
+
+
 int main () 
 {
     const bool DEBUG = true;
@@ -29,13 +49,13 @@ int main ()
     
 
     // probaj inspectat s debuggerom (vrlo je cool)
-    map<LR1Item, int> m;
-    m[{"a", {}, {"a", "b", "c"}, {"b"}}] = 0;
-    m[{"a", {}, {"a", "c", "b"}, {"b"}}] = 1;
-    m[{"a", {}, {"a", "b", "c"}, {"b", "a"}}] = 2;
-    m[{"a", {}, {"a", "b", "c"}, {"a", "b"}}] = 3;
-    m[{"a", {"a"}, {"a", "b", "c"}, {"a"}}] = 4;
-    m[{"a", {}, {"a", "b", "c"}, {"b"}}] = 5;
+    // map<LR1Item, int> m;
+    // m[{"a", {}, {"a", "b", "c"}, {"b"}}] = 0;
+    // m[{"a", {}, {"a", "c", "b"}, {"b"}}] = 1;
+    // m[{"a", {}, {"a", "b", "c"}, {"b", "a"}}] = 2;
+    // m[{"a", {}, {"a", "b", "c"}, {"a", "b"}}] = 3;
+    // m[{"a", {"a"}, {"a", "b", "c"}, {"a"}}] = 4;
+    // m[{"a", {}, {"a", "b", "c"}, {"b"}}] = 5;
 
     cin.get();
     

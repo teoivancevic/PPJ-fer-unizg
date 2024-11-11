@@ -57,17 +57,17 @@ public:
                     Symbol symbolsString = line.substr(1, line.size()-1);
 
                     Symbol symbol = "";
-                    for(auto c: symbolsString){
-                        if(c == ' '){
+                    for (auto c: symbolsString) {
+                        if (c == ' ') {
                             production.emplace_back(symbol);
                             symbol = "";
-                        }else{
+                        } else {
                             symbol += c;
                         }
                     }
                     production.emplace_back(symbol);
 
-                    PRODUKCIJE[currSymbol].push_back(production);
+                    PRODUKCIJE[currSymbol].emplace_back(production);
                 }
                 else
                 {
@@ -214,8 +214,8 @@ public:
 struct LR1Item 
 {
     Symbol left;               
-    Word before_dot;      
-    Word after_dot;        
+    Word before_dot; 
+    Word after_dot;
     set<Symbol> lookahead;
 
     LR1Item () : LR1Item("", {}) {}
