@@ -8,6 +8,7 @@
 
 class Grammar
 {
+    int ID_global = 0;
     std::ifstream in;
     bool read_stdin = false;
     bool write_stdout = false;
@@ -20,6 +21,9 @@ public:
     set<Symbol> ZAVRSNI;
     set<Symbol> SYNC_ZAVRSNI;
     map<Symbol, vector<Word>> PRODUKCIJE;
+    
+    map<pair<Symbol, Word>, int> ID_PRODUKCIJE; // extendat za ID od produkcije @ teo
+    
 
     Grammar(const std::string& inputStream/* = "cin"*/) //reference nemre imat default value
     {
@@ -68,6 +72,7 @@ public:
                     production.emplace_back(symbol);
 
                     PRODUKCIJE[currSymbol].emplace_back(production);
+                    ID_PRODUKCIJE[{currSymbol, production}] = ID_global++;
                 }
                 else
                 {
@@ -197,7 +202,7 @@ public:
             cout << "  " << p.first << " ::= ";
             for(auto pp: p.second){
                 for(auto z: pp)
-                    if (z == "$")
+                    if (z == eps)
                         cout << "\"\" ";
                     else
                         cout << z << " ";
