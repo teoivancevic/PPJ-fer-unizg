@@ -47,8 +47,8 @@ set<T> make_union(const set<T>& s1, const set<T>& s2) {
 template<typename T>
 vector<T> reverse (const vector<T>& vec) {
     vector<T> rez;
-    for (int i=0; i<(int) production.size(); i++) 
-        rez.emplace_back(production[i]);
+    for (int i=0; i<(int) vec.size(); i++) 
+        rez.emplace_back(vec[i]);
     return rez;
 }
 
