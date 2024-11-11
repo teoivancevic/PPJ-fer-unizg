@@ -8,6 +8,9 @@
 
 class Grammar
 {
+    std::ifstream in;
+    bool read_stdin = false;
+    bool write_stdout = false;
 private:
     vector<std::string> fileLines_backup;
 public:
@@ -18,15 +21,20 @@ public:
     set<Symbol> SYNC_ZAVRSNI;
     map<Symbol, vector<Word>> PRODUKCIJE;
 
-    Grammar(std::string filePath) 
+    Grammar(const std::string& inputStream = "cin") 
     {
-        std::ifstream file(filePath);
+        if(inputStream != "cin") 
+            in = std::ifstream(inputStream);
+        else 
+            read_stdin = true;
+        // std::ifstream file(filePath);
         std::string line;
+        #define GEN_IN (read_stdin ? std::cin : in), line
 
-        if (file.is_open())
+        if (read_stdin || in.is_open())
         {
             Symbol currSymbol = "";
-            while(getline(file, line))
+            while(getline(GEN_IN))
             {
                 if(line[0] == '%')
                 {
@@ -35,7 +43,7 @@ public:
                     else if(line[1] == 'T') 
                         readSymbol(line, ZAVRSNI); 
                     else if(line.substr(1, 3) == "Syn") 
-                        readSymbol(line, SYNC_ZAVRSNI);
+                        readSymbol(line, SYNC_ZAVRSNI, 5);
                     else 
                         cerr << "Error in file\n";          
                 }
@@ -66,22 +74,23 @@ public:
                     cerr << "Error in file\n";
                 }
 
-                fileLines_backup.push_back(line);
+                fileLines_backup.emplace_back(line);
             }
-            file.close();
+            in.close();
         } 
         else
             cerr << "Unable to open file\n";
     }
 
-    Symbol readSymbol (const std::string line, set<Symbol>& container) 
+    Symbol readSymbol (const std::string line, set<Symbol>& container, int removeFirst = 3) 
     {
-        Symbol symbolsString = line.substr(3, line.size()-3);
-
+        Symbol symbolsString = line.substr(removeFirst, line.size()-removeFirst);
+        Symbol firstSymbol = "";
         Symbol symbol = "";
         for (auto c: symbolsString) {
             if (c == ' ') {
                 container.emplace(symbol);
+                if (firstSymbol == "") firstSymbol = symbol;
                 symbol = "";
             } else {
                 symbol += c;
@@ -89,7 +98,7 @@ public:
         }
         container.emplace(symbol);
 
-        return symbol;
+        return firstSymbol;
     }
 
     bool startsWith (const Symbol& sym1, const Symbol& sym2) const 
@@ -155,43 +164,43 @@ public:
         return rez;
     }
 
-    // void dbgPrintFileLines () {
-    //     for(auto l: fileLines_backup){
-    //         cout << l << "\n";
-    //     }
-    // }
+    void dbgPrintFileLines () {
+        for(auto l: fileLines_backup){
+            cout << l << "\n";
+        }
+    }
 
     // //Ovom GDB debugger moze posluzit, iako je bol za set upat
-    // void printInfo()
-    // {
-    //     cout << "Nezavrsni: \t";
-    //     for(auto s: NEZAVRSNI){
-    //         cout << s << " ";
-    //     }
+    void printInfo()
+    {
+        cout << "Nezavrsni: \t";
+        for(auto s: NEZAVRSNI){
+            cout << s << " ";
+        }
 
-    //     cout << "\nZavrsni: \t";
-    //     for(auto z: ZAVRSNI)
-    //         cout << z << " ";
+        cout << "\nZavrsni: \t";
+        for(auto z: ZAVRSNI)
+            cout << z << " ";
 
-    //     cout << "\nSync Zavrsni: \t";
-    //     for(auto z: SYNC_ZAVRSNI)
-    //         cout << z << " ";
+        cout << "\nSync Zavrsni: \t";
+        for(auto z: SYNC_ZAVRSNI)
+            cout << z << " ";
 
-    //     cout << "\nProdukcije: \n";
-    //     for(auto p: PRODUKCIJE){
-    //         cout << "  " << p.first << " ::= ";
-    //         for(auto pp: p.second){
-    //             for(auto z: pp)
-    //                 if (z == "$")
-    //                     cout << "\"\" ";
-    //                 else
-    //                     cout << z << " ";
-    //             if(pp != p.second.back())
-    //                 cout << "| ";
-    //         }
-    //         cout << "\n";
-    //     }
-    // }
+        cout << "\nProdukcije: \n";
+        for(auto p: PRODUKCIJE){
+            cout << "  " << p.first << " ::= ";
+            for(auto pp: p.second){
+                for(auto z: pp)
+                    if (z == "$")
+                        cout << "\"\" ";
+                    else
+                        cout << z << " ";
+                if(pp != p.second.back())
+                    cout << "| ";
+            }
+            cout << "\n";
+        }
+    }
 
     void dodajNoviPocetniZnak (const Symbol& newStartSym)
     {
@@ -209,7 +218,7 @@ struct LR1Item
     Word after_dot;
     set<Symbol> lookahead;
 
-    LR1Item() {}
+    LR1Item () : LR1Item("", {}) {}
 
     LR1Item(const Symbol& left) : LR1Item(left, {}) {}
 

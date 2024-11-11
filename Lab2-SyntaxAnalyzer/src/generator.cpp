@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include "Utils.hpp"
-#include "Automat.hpp"
+// #include "Automat.hpp"
 #include "Grammar.hpp"
 
 //TODO:
@@ -26,6 +26,28 @@ public:
 
 int main () 
 {
+    const bool DEBUG = true;
+    
+    std::string file_path = "../test/lab2_teza/19lr1/test.san";
+    // std::string file_path;
+    //cin >> file_path;
+
+    // korak 1 - parsiranje gramatike
+    // Grammar grammar(file_path);
+    Grammar grammar("cin");
+    
+    // korak 2 - dodajemo novi pocetni znak (zasto ovo nije u konstruktoru?)
+    grammar.dodajNoviPocetniZnak("<<S'>>");
+    if(DEBUG){
+        grammar.dbgPrintFileLines();
+        printf("\n");
+        grammar.printInfo(); 
+        cin.get();
+    }
+    
+    
+    
+
     // probaj inspectat s debuggerom (vrlo je cool)
     // map<LR1Item, int> m;
     // m[{"a", {}, {"a", "b", "c"}, {"b"}}] = 0;
