@@ -8,7 +8,7 @@
 //PROVJERI:
 class eNKA 
 {
-    State ID = 0;
+    State ID = 1;
 
 public:
 
@@ -22,29 +22,26 @@ public:
     mutable StateMap<LR1Item> items;
     mutable StateMap<map<Symbol, set<State>>> transitions;
     mutable set<Symbol> symbols = {end_sym};
-    mutable State startState;
+    const State q0 = 0;
 
 public:
     eNKA() {} //kada je definiran drugi konstruktor default se treba definirati eksplicitno
 
     eNKA(const Grammar& grammar)
     {
-        //(note): pazi kad koristis at() a kada operator[] s mapama!
-        //at() koristi kada god je moguće aka. kada postoji zapis i samo ga citas
-        symbols.emplace(grammar.BEGIN_SYMBOL);
+        const Symbol& S = grammar.BEGIN_SYMBOL;
+        symbols.emplace(S);
+        transitions.at(q0)[eps].insert(
+            newState(
+                {S, grammar.PRODUKCIJE.at(S).at(0), {end_sym}}
+            )
+        );
 
         for(const auto& [leftSymbol, productions] : grammar.PRODUKCIJE) // prodji kroz sve produkcije
         for(const Word& production : productions)
         { 
-            LR1Item item (
-                leftSymbol, production, 
-                leftSymbol == grammar.BEGIN_SYMBOL ? 
-                    set<Symbol>{end_sym} : set<Symbol>{}
-            );
-            
+            LR1Item item (leftSymbol, production);
             State state = getState(item);
-            if (leftSymbol == grammar.BEGIN_SYMBOL) 
-                startState = state;
 
             while (!item.isComplete())
             {
@@ -59,7 +56,7 @@ public:
 
     //eps okolina od startState
     inline set<State>& start() const {
-        return transitions[startState][eps];
+        return transitions[q0][eps];
     }
 
     //ovo radi tek nakon sto se svi prijelazi izracunaju
@@ -157,7 +154,7 @@ public:
     template<typename T>
     using StateMap = map<State, T>;
 
-private:
+// private:
     StateMap<set<LR1Item>> items;
     StateMap<map<Symbol, State>> transitions;
     State start;
