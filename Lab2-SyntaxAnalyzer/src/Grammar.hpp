@@ -191,7 +191,7 @@ public:
             cout << "  " << p.first << " ::= ";
             for(auto pp: p.second){
                 for(auto z: pp)
-                    if (z == "$")
+                    if (z == eps)
                         cout << "\"\" ";
                     else
                         cout << z << " ";

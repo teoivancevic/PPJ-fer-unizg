@@ -27,8 +27,10 @@ using std::queue;
 using Symbol = std::string; //ovo treba razlikovati od std::string jer bi se trebalo koristiti samo u kontekstu gramatike (zato bi bilo bolje da je u klasi ali ok)
 using State = int;
 using Action = std::string; //--//--
+// using Action = std::pair<std::enum<>, int>; //--//--
 using Word = vector<Symbol>;
 
+static const Symbol GRAMMAR_NEW_BEGIN_STATE = "<<S'>>";
 static const Symbol eps = "$";
 static const Symbol end_sym = "$";
 
