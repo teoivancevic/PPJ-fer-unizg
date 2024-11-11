@@ -28,8 +28,8 @@ bool DEBUG = false;
 
 int main () 
 {
-    // DEBUG = true;
-    std::string file_path = "../test/lab2_teza/19lr1/test.san";
+    DEBUG = true;
+    std::string file_path = "../test/lab2_teza/mojtest/test.san";
     // std::string file_path;
     //cin >> file_path;
 
@@ -42,7 +42,7 @@ int main ()
     if(DEBUG){
         grammar.dbgPrintFileLines();
         printf("\n");
-        grammar.printInfo(); 
+        grammar.printInfo();
         // cin.get();
     }
 

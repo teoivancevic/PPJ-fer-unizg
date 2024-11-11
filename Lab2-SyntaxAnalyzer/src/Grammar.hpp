@@ -6,6 +6,8 @@
 //Dodo sam neka preimenovanja jer mi nisu bila konzistentna
 //States bi trebala biti stanja automata, a Symbols znakovi gramatike, drzimo se toga
 
+using std::endl;
+
 class Grammar
 {
     std::ifstream in;
@@ -45,7 +47,7 @@ public:
                     else if(line.substr(1, 3) == "Syn") 
                         readSymbol(line, SYNC_ZAVRSNI, 5);
                     else 
-                        cerr << "Error in file\n";          
+                        cerr << "Error in file" <<endl;          
                 }
                 else if(line[0] == '<')
                 {
@@ -71,7 +73,7 @@ public:
                 }
                 else
                 {
-                    cerr << "Error in file\n";
+                    cerr << "Error in file" <<endl;
                 }
 
                 fileLines_backup.emplace_back(line);
@@ -79,7 +81,7 @@ public:
             in.close();
         } 
         else
-            cerr << "Unable to open file\n";
+            cerr << "Unable to open file" <<endl;
     }
 
     Symbol readSymbol (const std::string line, set<Symbol>& container, int removeFirst = 3) 
@@ -172,7 +174,7 @@ public:
 
     void dbgPrintFileLines () {
         for(auto l: fileLines_backup){
-            cout << l << "\n";
+            cout << l <<endl;
         }
     }
 
@@ -184,15 +186,15 @@ public:
             cout << s << " ";
         }
 
-        cout << "\nZavrsni: \t";
+        cout <<endl <<"Zavrsni: \t";
         for(auto z: ZAVRSNI)
             cout << z << " ";
 
-        cout << "\nSync Zavrsni: \t";
+        cout <<endl <<"Sync Zavrsni: \t";
         for(auto z: SYNC_ZAVRSNI)
             cout << z << " ";
 
-        cout << "\nProdukcije: \n";
+        cout << endl <<"Produkcije: !" <<endl;
         for(auto p: PRODUKCIJE){
             cout << "  " << p.first << " ::= ";
             for(auto pp: p.second){
@@ -204,7 +206,7 @@ public:
                 if(pp != p.second.back())
                     cout << "| ";
             }
-            cout << "\n";
+            cout <<endl;
         }
     }
 
