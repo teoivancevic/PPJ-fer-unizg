@@ -38,6 +38,8 @@ public:
 
             if (!pomakIliStavi) {
                 set<LR1Item> current_items = dka.itemsAtState(id_curr);
+
+                map<Symbol, vector<pair<int, LR1Item>>> reductions_by_lookahead;
                 
                 for (const auto& item : current_items) {
                     if (item.after_dot.empty()) {
@@ -53,15 +55,42 @@ public:
                             // TODO: rijesiti nejednoznacnost reduciraj/reduciraj
                             // prioritet ima produkcija s manjim ID-jem produkcije
                             if (prod_index != -1) {
-                                // Store just "REDUCIRAJ <index>"
+                                
+                                
+                                // for (const auto& look : item.lookahead) {
+                                //     akcija[{id_curr, look}] = "REDUCIRAJ " + std::to_string(prod_index);
+                                // }
                                 for (const auto& look : item.lookahead) {
-                                    akcija[{id_curr, look}] = "REDUCIRAJ " + std::to_string(prod_index);
+                                    reductions_by_lookahead[look].push_back({prod_index, item});
                                 }
                             }
 
                             // "REDUCIRAJ j" --> j je id produkcije u gramatici
                         }
                     }
+                }
+
+                // nejednoznacnost?
+                for (auto& [lookahead, reductions] : reductions_by_lookahead) {
+                    if (reductions.size() > 1) {
+                        // Sort by production ID (lower ID has priority)
+                        sort(reductions.begin(), reductions.end(), 
+                             [](const auto& a, const auto& b) { return a.first < b.first; });
+                        
+                        // Log conflict
+                        cerr << "Reduce/Reduce conflict in state " << id_curr 
+                             << " for lookahead " << lookahead << std::endl;
+                        cerr << "Choosing production with ID " << reductions[0].first 
+                             << " over productions with IDs: ";
+                        for (size_t i = 1; i < reductions.size(); i++) {
+                            cerr << reductions[i].first << " ";
+                        }
+                        cerr << std::endl;
+                    }
+                    
+                    // Use the reduction with lowest ID
+                    // Store just "REDUCIRAJ <index>"
+                    akcija[{id_curr, lookahead}] = "REDUCIRAJ " + std::to_string(reductions[0].first);
                 }
             }
 
