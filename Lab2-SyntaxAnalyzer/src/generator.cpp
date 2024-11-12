@@ -109,6 +109,11 @@ public:
         // ako A -> a. i B -> g je u lookahead ---> Reduciraj(A -> aBb)
 
     // void build();
+    // 
+    // 
+    // 
+    // 
+
 
     void outputToFile(const std::string& filename, const Grammar& grammar) const {
         std::ofstream out(filename);
@@ -118,7 +123,7 @@ public:
             out << symbol << "\n";
         }
 
-        out << "GRAMMAR_PRODUCTIONS:\n";
+        out << "\nGRAMMAR_PRODUCTIONS:\n";
         for (int i=0; i < grammar.ID_global; i++) {
             auto [left, right] = grammar.ID_PRODUKCIJE_MAPA.at(i);
             out << i << " " << left << " -> ";
@@ -131,12 +136,12 @@ public:
             out << "\n";
         }
 
-        out << "AKCIJA:\n";
+        out << "\nAKCIJA:\n";
         for (const auto& [key, value] : akcija) {
             out << key.first << " " << key.second << " " << value << "\n";
         }
         
-        out << "NOVO STANJE:\n";
+        out << "\nNOVO STANJE:\n";
         for (const auto& [key, value] : novoStanje) {
             out << key.first << " " << key.second << " " << value << "\n";
         }
@@ -244,8 +249,9 @@ void teoMain_mockParsingTable(){
 
 int main () 
 {
-    // teoMain();
-    teoMain_mockParsingTable();
+    teoMain();
+    // teoMain_mockParsingTable();
+    cin.get();
 
    
     std::string file_path = "../test/lab2_teza/01aab_2/test.san";

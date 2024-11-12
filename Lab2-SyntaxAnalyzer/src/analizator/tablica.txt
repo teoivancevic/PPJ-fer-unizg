@@ -1,12 +1,18 @@
 SYNC_SYMBOLS:
 a
+B
+S
+c
+e
+
 GRAMMAR_PRODUCTIONS:
 0 <S> -> <A> <A> <S>
 1 <S> -> <B> <S>
-2 <S> -> <A><A>
+2 <S> -> <A> <A>
 3 <S> -> <B>
 4 <A> -> a
 5 <B> -> b
+
 AKCIJA:
 0 a POMAKNI 2
 0 b POMAKNI 3
@@ -29,6 +35,7 @@ AKCIJA:
 8 $ REDUCIRAJ 3
 8 a REDUCIRAJ 3
 8 b REDUCIRAJ 3
+
 NOVO STANJE:
 0 A STAVI 4
 0 B STAVI 5
