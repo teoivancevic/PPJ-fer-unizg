@@ -28,59 +28,30 @@ bool DEBUG = false;
 
 int main () 
 {
-    DEBUG = true;
-    std::string file_path = "../test/lab2_teza/mojtest/test.san";
-    // std::string file_path;
-    //cin >> file_path;
+    // DEBUG = true;
+    std::string file_path = "../test/lab2_teza/01aab_2/test.san";
 
-    // korak 1 - parsiranje gramatike
     Grammar grammar(file_path);
-    // Grammar grammar("cin");
     
-    // korak 2 - dodajemo novi pocetni znak (zasto ovo nije u konstruktoru?)
     grammar.dodajNoviPocetniZnak("<S'>");
-    if(DEBUG){
+    if (DEBUG) {
         grammar.dbgPrintFileLines();
         printf("\n");
         grammar.printInfo();
-        // cin.get();
     }
 
     eNKA enka(grammar);
-    
-    // cout <<"\n" <<grammar.startsWith(vector<Symbol>{"<A>", "<B>"}, "a") <<std::endl;
+    DKA dka(enka);
 
-    // cout <<grammar.isVanishing(eps) <<std::endl; 
-    // auto a = grammar.startsWith("<A>");
+    std::string in = "b <B> a <S> b a b <A>";
+    // cin >>in;
+
+    forEachWord(in, [&dka, &enka](const Symbol& sym){
+        enka.update(sym);
+        dka.update(sym);
+    });
 
     return 0;
-
-    cin.get();
-    
-    //ne treba biti global var
-    // const std::string file_path = "../test/lab2_teza/19lr1/test.san";
-
-    // korak 1 - parsiranje gramatike
-    // Grammar grammar(file_path);
-    
-    // korak 2 - dodajemo novi pocetni znak (zasto ovo nije u konstruktoru?)
-    // grammar.dodajNoviPocetniZnak();
-    // grammar.printInfo();  
-
-    // korak 3 - konstrukcija eNKA iz gramatike
-    // eNKA enka(grammar);
-    // enka.buildFromGrammar();
-
-    // korak 4 - konstrukcija DKA iz eNKA
-    // DKA dka(enka);
-
-    // korak 5 - konstrukcija tablice parsiranja
-    // ParsingTable table(dka, grammar); // TODO: fixat ovo
-    // table.build(); // TODO: fixat ovo
-
-    // korak 6 - ispis tablice parsiranja
-    // table.outputToFile("parser_tables.txt"); // TODO: fixat ovo
-
 
     return 0;
 }

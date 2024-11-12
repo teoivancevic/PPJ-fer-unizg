@@ -69,7 +69,7 @@ public:
                     }
                     production.emplace_back(symbol);
 
-                    PRODUKCIJE[currSymbol].emplace_back(production);
+                    PRODUKCIJE[currSymbol].emplace_back(reverse(production));
                 }
                 else
                 {
@@ -198,11 +198,13 @@ public:
         for(auto p: PRODUKCIJE){
             cout << "  " << p.first << " ::= ";
             for(auto pp: p.second){
-                for(auto z: pp)
+                for(int i = pp.size() -1; i>-1; i--){
+                    const Symbol& z = pp[i];
                     if (z == "$")
                         cout << "\"\" ";
                     else
                         cout << z << " ";
+                }
                 if(pp != p.second.back())
                     cout << "| ";
             }
