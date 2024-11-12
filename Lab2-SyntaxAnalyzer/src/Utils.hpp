@@ -7,6 +7,7 @@
 #include <map>
 #include <set>
 #include <queue>
+#include <algorithm>
 
 /*vezano za using namespace std:
     radije ne bi to koristio jer je zbilja teško razlučit što je STL a što 

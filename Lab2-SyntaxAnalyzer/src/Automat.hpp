@@ -42,11 +42,12 @@ public:
         
         while (!generator.empty()) 
         {
+
             LR1Item item = generator.front();
             generator.pop();
-
+            cerr << "item loaded " << std::endl;
             State state = getState(item);
-
+            cerr << "state: " << state << std::endl;
             while (!item.isComplete())
             {
                 const Symbol& nextSym = item.symbolAfterDot();
@@ -70,10 +71,13 @@ public:
                         generator.push(std::move(nextItem));
                     }
                 }
+                cerr << "enka before insert transition" << std::endl;
                 //dodajem produkciju po pravilu b) str 148 iz skripte
                 transitions[state][nextSym].insert(state = getState(item));
+                cerr << "enka AFTER insert transition" << std::endl;
             }    
         }
+        cerr << "eNKA constructed, from enka" << std::endl;
 
         bool evaluated[ID] = {};
         for (State state = q0; state < ID; state++)
@@ -168,7 +172,7 @@ public:
     template<typename T>
     using StateMap = map<State, T>;
 
-private:
+// private:
     StateMap<set<LR1Item>> items;
     StateMap<map<Symbol, State>> transitions;
     State start;
