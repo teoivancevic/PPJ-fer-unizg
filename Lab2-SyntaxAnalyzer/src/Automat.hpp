@@ -45,22 +45,14 @@ public:
         //za svaku stavku rekurzivno generiranu iz početne:
         while (!generator.empty()) 
         {
-
             //dohvati se sljedeći stateID
             State state = generator.front();
 
             //dohvati se pripadni LR1Item
             LR1Item item = items.at(state);
             generator.pop();
-            // cerr << "item loaded " << std::endl;
-//             LR1Item item = generator.front();
-//             generator.pop();
-//             cerr << "item loaded " << std::endl;
-//             State state = getState(item);
-//             cerr << "state: " << state << std::endl;
 
             //za svaku stavku dobivenu shiftanjem točke u desno:
-
             while (!item.isComplete())
             {
                 //dohvati sljedeći znak iza točke
@@ -71,12 +63,12 @@ public:
                 const Word& beta = item.shift_dot_r().after_dot;
                 //T je lookahead kao u skripti
                 const set<Symbol> T = 
-                    make_union ( //računato po pravilima i) ii) na str 148
+                    make_union ( //računato po pravilima i) ii) --//--
                         grammar.startsWith(beta), 
                         (grammar.isVanishing(beta) ? item.lookahead : set<Symbol>{})
                     );
 
-                //dodajem produkcije po pravilu c) str 148 iz skripte
+                //dodajem produkcije po pravilu c) --//--
                 if (grammar.PRODUKCIJE.count(nextSym)) {
                     for (const Word& production : grammar.PRODUKCIJE.at(nextSym)) 
                     {
@@ -88,17 +80,14 @@ public:
                     }
                 }
               
-                cerr << "enka before insert transition" << std::endl;
-                //dodajem produkciju po pravilu b) str 148 iz skripte
+                //dodajem produkciju po pravilu b) --//--
                 transitions[state][nextSym].insert(state = getState(item));
-                cerr << "enka AFTER insert transition" << std::endl;
             }    
         }
-        cerr << "eNKA constructed, from enka" << std::endl;
 
         //izračunaj sva eps okruženja
         bool evaluated[ID] = {};
-        for (State state = q0; state < ID; state++)
+        for (State state = 0; state < (int) size(); state++)
             computeEpsilonEnvironment(state, grammar, evaluated);
         
         reset();
