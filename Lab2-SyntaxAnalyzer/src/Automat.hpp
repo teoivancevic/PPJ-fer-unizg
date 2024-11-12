@@ -258,6 +258,10 @@ public:
         return (exists(items, currentState) ? items.at(currentState) : set<LR1Item>{});
     }
 
+    inline const set<LR1Item>& itemsAtState(State state) const {
+        return items.at(state);
+    } 
+
     inline std::size_t size() const {
         return ID;
     }
