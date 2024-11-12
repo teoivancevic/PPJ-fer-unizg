@@ -90,17 +90,32 @@ struct ParsingTable
         for (const Symbol& symbol : grammar.SYNC_ZAVRSNI)
             out << symbol << endl;
 
-        out << "GRAMMAR_PRODUCTIONS:" <<endl;
+        out << "\nGRAMMAR_PRODUCTIONS:" <<endl;
         for (const auto& [production, id] : grammar.ID_PRODUKCIJE) 
             out << id << " " <<production.first << " -> " << concatToString_r(production.second) << endl; //REVERSE
 
-        out << "AKCIJA:" <<endl;
+//         out << "\nGRAMMAR_PRODUCTIONS:\n";
+//         for (int i=0; i < grammar.ID_global; i++) {
+//             auto [left, right] = grammar.ID_PRODUKCIJE_MAPA.at(i);
+//             out << i << " " << left << " -> ";
+//             for (const auto& s : right) {
+//                 if(s == right.back()) 
+//                     out << s;
+//                 else
+//                     out << s << " ";
+//             }
+//             out << "\n";
+//         }
+
+  
+        out << "\nAKCIJA:" <<endl;
         for (const auto& [key, action] : akcija)
             out << key.first << " " << key.second << " " << action.toString() << endl;
         
-        out << "NOVO STANJE:" <<endl;
+        out << "\nNOVO STANJE:" <<endl;
         for (const auto& [key, action] : novoStanje)
             out << key.first << " " << key.second << " " << action.toString() << endl;
+
         
         out.close();
     }
@@ -202,4 +217,40 @@ void teoMain_mockParsingTable()
     cerr << "Parsing table constructed" << std::endl;
     
     table.outputToFile("analizator/tablica.txt", grammar);
+}
+
+int main () 
+{
+    teoMain();
+    // teoMain_mockParsingTable();
+    cin.get();
+
+   
+    std::string file_path = "../test/lab2_teza/01aab_2/test.san";
+
+    Grammar grammar(file_path);
+    
+
+    // korak 2 - dodajemo novi pocetni znak (zasto ovo nije u konstruktoru?)
+
+    // grammar.dodajNoviPocetniZnak(GRAMMAR_NEW_BEGIN_STATE);
+  
+    if (DEBUG){
+        grammar.dbgPrintFileLines();
+        printf("\n");
+        grammar.printInfo();
+    }
+
+    eNKA enka(grammar);
+    DKA dka(enka);
+
+    std::string in = "b <B> a <S> b a b <A>";
+    // cin >>in;
+
+    forEachWord(in, [&dka, &enka](const Symbol& sym){
+        enka.update(sym);
+        dka.update(sym);
+    });
+
+    return 0;
 }
