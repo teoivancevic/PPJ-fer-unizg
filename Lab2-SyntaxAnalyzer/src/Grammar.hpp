@@ -10,12 +10,13 @@ using std::endl;
 
 class Grammar
 {
-    
     std::ifstream in;
     bool read_stdin = false;
     bool write_stdout = false;
+
 private:
     vector<std::string> fileLines_backup;
+
 public:
     int ID_global = 0;
     Symbol BEGIN_SYMBOL;
@@ -24,9 +25,11 @@ public:
     set<Symbol> SYNC_ZAVRSNI;
     map<Symbol, vector<Word>> PRODUKCIJE;
     
-    map<pair<Symbol, Word>, int> ID_PRODUKCIJE; // extendat za ID od produkcije @ teo
-    map<int, pair<Symbol, Word>> ID_PRODUKCIJE_MAPA; // extendat za ID od produkcije @ teo
+    map<pair<Symbol, Word>, int> ID_PRODUKCIJE;
     
+    bool isTerminating(const Symbol& sym) const {
+        return (bool) ZAVRSNI.count(sym);
+    }
 
     Grammar(const std::string& inputStream/* = "cin"*/) //reference nemre imat default value
     {
@@ -61,7 +64,7 @@ public:
                 else if(line[0] == ' ')
                 {
                     Word production = {};
-                    Symbol symbolsString = line.substr(1, line.size()-1);
+                    Symbol symbolsString = line.substr(1, (int) line.size() - 1);
 
                     Symbol symbol = "";
                     for (auto c: symbolsString) {
@@ -73,15 +76,14 @@ public:
                         }
                     }
                     production.emplace_back(symbol);
-
-                    PRODUKCIJE[currSymbol].emplace_back(reverse(production)); //REVERSE
+                    //usklađeno radi obrnutosti LR1Stavka.after_dot vectora
+                    production = reverse(production); //REVERSE
+                    
+                    PRODUKCIJE[currSymbol].emplace_back(production);
                     ID_PRODUKCIJE[{currSymbol, production}] = ID_global++;
-                    ID_PRODUKCIJE_MAPA[ID_global-1] = {currSymbol, production};
                 }
                 else
-                {
                     cerr << "Error in file" <<endl;
-                }
 
                 fileLines_backup.emplace_back(line);
             }
@@ -93,7 +95,7 @@ public:
 
     Symbol readSymbol (const std::string line, set<Symbol>& container, int removeFirst = 3) 
     {
-        Symbol symbolsString = line.substr(removeFirst, line.size()-removeFirst);
+        Symbol symbolsString = line.substr(removeFirst, (int) line.size() - removeFirst);
         Symbol firstSymbol = "";
         Symbol symbol = "";
         for (auto c: symbolsString) {
@@ -125,7 +127,7 @@ public:
     bool startsWith (const Word& word, const Symbol& sym2) const 
     {
         //usklađeno radi obrnutosti LR1Stavka.after_dot vectora
-        for (int i = word.size() - 1; i>-1; i--) 
+        for (int i = (int) word.size() - 1; i>-1; i--)  //REVERSE
         {
             const Symbol& sym1 = word[i];
 
@@ -154,7 +156,7 @@ public:
         set<Symbol> rez;
 
         //isto usklađeno...
-        for (int i = word.size() - 1; i>-1; i--) 
+        for (int i = (int) word.size() - 1; i>-1; i--)  //REVERSE
         {
             const Symbol& sym = word[i];
 
@@ -185,27 +187,26 @@ public:
         }
     }
 
-    // //Ovom GDB debugger moze posluzit, iako je bol za set upat
     void printInfo()
     {
         cout << "Nezavrsni: \t";
-        for(auto s: NEZAVRSNI){
+        for (auto s: NEZAVRSNI){
             cout << s << " ";
         }
 
         cout <<endl <<"Zavrsni: \t";
-        for(auto z: ZAVRSNI)
+        for (auto z: ZAVRSNI)
             cout << z << " ";
 
         cout <<endl <<"Sync Zavrsni: \t";
-        for(auto z: SYNC_ZAVRSNI)
+        for (auto z: SYNC_ZAVRSNI)
             cout << z << " ";
 
         cout << endl <<"Produkcije: !" <<endl;
-        for(auto p: PRODUKCIJE){
+        for (auto p: PRODUKCIJE){
             cout << "  " << p.first << " ::= ";
-            for(auto pp: p.second){
-                for(int i = pp.size() -1; i>-1; i--){
+            for (auto pp: p.second) {
+                for (int i = (int) pp.size() -1; i > -1; i--) {  //REVERSE
                     const Symbol& z = pp[i];
                     if (z == eps)
                         cout << "\"\" ";

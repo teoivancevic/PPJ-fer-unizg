@@ -34,7 +34,6 @@ using std::queue;
 //ovo bi vjv trebalo definirati lokalno u klasama, ali se koriste dovoljno često izvan klasa pa je ok
 using Symbol = std::string; //ovo treba razlikovati od std::string jer bi se trebalo koristiti samo u kontekstu gramatike (zato bi bilo bolje da je u klasi ali ok)
 using State = int;
-using Action = std::string; //--//--
 // using Action = std::pair<std::enum<>, int>; //--//--
 using Word = vector<Symbol>;
 
@@ -45,6 +44,7 @@ static const Symbol end_sym = "$";
 using std::cin;
 using std::cout;
 using std::cerr;
+using std::endl;
 
 template<typename T>
 set<T> make_union(const set<T>& s1, const set<T>& s2) {
@@ -57,7 +57,7 @@ set<T> make_union(const set<T>& s1, const set<T>& s2) {
 template<typename T>
 vector<T> reverse (const vector<T>& vec) {
     vector<T> rez;
-    for (int i = vec.size() - 1; i>=0; i--) 
+    for (int i = (int) vec.size() - 1; i>=0; i--) 
         rez.emplace_back(vec[i]);
     return rez;
 }
@@ -90,7 +90,7 @@ struct std::equal_to<vector<T>> {
     std::size_t operator() (const vector<T>& vec1, const vector<T>& vec2) const {
         if (vec1.size() != vec2.size()) return false;
         bool equal = true;
-        for (int i=0; i<vec1.size(); i++) { 
+        for (int i=0; i < (int) vec1.size(); i++) { 
             equal &= vec1[i] == vec2[i];
         }
         return equal;
@@ -132,7 +132,7 @@ std::string string_format( const std::string& format, Args ... args )
 static std::string consumeNextWord (std::string& str, char del = ' ') {
     int i;
     std::string word;
-    for (i = 0; i<str.size(); i++) {
+    for (i = 0; i < (int) str.size(); i++) {
         if (str[i] == del) {
             word = str.substr(0, i);
             str = str.c_str() + i + 1;
@@ -143,9 +143,10 @@ static std::string consumeNextWord (std::string& str, char del = ' ') {
     return word;
 }
 
+[[maybe_unused]]
 static std::string readNextWord (const std::string& str, int at = 0, char del = ' ') {
     std::string word;
-    for (int i = at; i<str.size(); i++)
+    for (int i = at; i < (int) str.size(); i++)
         if (str[i] == del)
             return str.substr(at, i);
     return str;
@@ -173,4 +174,14 @@ void consumeEachWord (std::string& str, ACT action, char del = ' ') {
 template<typename T, typename K>
 inline bool exists(const map<K, T>& m, const K& state) {
     return (bool) m.count(state);
+}
+
+template<template <typename, typename...> class container, typename T, typename ...Args>
+std::string concatToString_r (const container<T, Args...>& c) {
+    std::string rez = "";
+    for (int i = (int) c.size() - 1; i > -1; i--) {
+        rez += c[i];
+        if (i) rez += " ";
+    }
+    return rez;
 }

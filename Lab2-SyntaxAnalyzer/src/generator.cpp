@@ -5,179 +5,141 @@
 #include "Grammar.hpp"
 
 
-class ParsingTable {
+struct Action {
+    std::string name;
+    int id;
 
-public:
-    
-    map<pair<int, Symbol>, Action> akcija;  // (state, terminal) -> action
-    map<pair<int, Symbol>, Action> novoStanje;  // (state, non-terminal) -> next state
+    Action() : name("ODBACI"), id(0) {}
+
+    Action(std::string name, int id) : name(name), id(id) {}
+
+    Action(std::string str) {
+        *this = std::move(str);
+    }
+
+    Action &operator= (std::string str) {
+        name = consumeNextWord(str);
+        id = to_int(consumeNextWord(str));
+        return *this;
+    }
+
+    std::string toString() const {
+        return name + " " + std::to_string(id);
+    }
+};
+
+struct ParsingTable 
+{
+    map<pair<State, Symbol>, Action> akcija;  // (state, terminal) -> action
+    map<pair<State, Symbol>, Action> novoStanje;  // (state, non-terminal) -> next state
     
     ParsingTable() {}
 
-    ParsingTable (const DKA& dka, const Grammar& grammar){
-        dka.reset();
-        // set<LR1Item> items = dka.items();
-
-        for (int id_curr = 0; id_curr < dka.size(); id_curr++) { // prolazim kroz stanja DKA
-            const map<Symbol, State> &prijelazi = dka.transitions.at(id_curr); // dohvacam prijelaze trenutnog stanja
-            bool pomakIliStavi = false; // rjesava nejednoznacnost POMAKNI/REDUCIRAJ
-
-            for (const auto& [simbol_prijelaza, novo_stanje_id] : prijelazi) { // prolazim kroz prijelaze stanja
-                if (grammar.ZAVRSNI.count(simbol_prijelaza)) { // ako je zavrsni znak
-                    
-                    // ako A -> A.aB stavka u itemima, simbol_prijelaza = a, ---> Pomak(stanje_id_sljedeceg_stanja)
-                    // ako A -> A.aB, a nije u lookahead ---> Odbaci() --> ovo se nece dogoddit unutar ovog ifa?
-                    // odmah dodaj u akcija, uvijek jednoznacno bcoz dka, itd.
-                    akcija[{id_curr, simbol_prijelaza}] = "POMAKNI " + std::to_string(novo_stanje_id);
-                    pomakIliStavi = true;
-                } else { // ako je nezavrsni znak
-                    novoStanje[{id_curr, simbol_prijelaza}] = "STAVI " + std::to_string(novo_stanje_id); // Stavi(stanje, )
-                    pomakIliStavi = true;
-                }
-            }
-
-
-            if (!pomakIliStavi) {
-                set<LR1Item> current_items = dka.itemsAtState(id_curr);
-
-                map<Symbol, vector<pair<int, LR1Item>>> reductions_by_lookahead;
+    ParsingTable (const DKA& dka, const Grammar& grammar)
+    {
+        for (State current = 0; current < (int) dka.size(); current++) 
+        {     
+            //za svaku stavku u stanju:
+            for (LR1Item item : dka.items.at(current)) 
+            {
+                const Symbol& sym = item.symbolAfterDot();
+                const auto key = pair{current, sym};
                 
-                for (const auto& item : current_items) {
-                    if (item.after_dot.empty()) {
-                        if (item.left == grammar.BEGIN_SYMBOL && item.lookahead.count(end_sym)) {
-                            // Accept case
-                            // S' -> s. {$}
-                            akcija[{id_curr, end_sym}] = "PRIHVATI";
-                        } else {
-                            // Reduce case - store the actual production
-                            // instead of actual production store id, from the order of input in grammar
-                            
-                            int prod_index = grammar.ID_PRODUKCIJE.at({item.left, item.before_dot});
-                            // TODO: rijesiti nejednoznacnost reduciraj/reduciraj
-                            // prioritet ima produkcija s manjim ID-jem produkcije
-                            if (prod_index != -1) {
-                                
-                                
-                                // for (const auto& look : item.lookahead) {
-                                //     akcija[{id_curr, look}] = "REDUCIRAJ " + std::to_string(prod_index);
-                                // }
-                                for (const auto& look : item.lookahead) {
-                                    reductions_by_lookahead[look].push_back({prod_index, item});
-                                }
-                            }
-
-                            // "REDUCIRAJ j" --> j je id produkcije u gramatici
-                        }
-                    }
+                //provjerava vrijedi li pravilo c) iz udzb str 151
+                if (item.left == GRAMMAR_NEW_BEGIN_STATE && sym == end_sym) 
+                {
+                    akcija.emplace(key, Action{"PRIHVATI"});
                 }
-
-                // nejednoznacnost?
-                for (auto& [lookahead, reductions] : reductions_by_lookahead) {
-                    if (reductions.size() > 1) {
-                        // Sort by production ID (lower ID has priority)
-                        sort(reductions.begin(), reductions.end(), 
-                             [](const auto& a, const auto& b) { return a.first < b.first; });
-                        
-                        // Log conflict
-                        cerr << "Reduce/Reduce conflict in state " << id_curr 
-                             << " for lookahead " << lookahead << std::endl;
-                        cerr << "Choosing production with ID " << reductions[0].first 
-                             << " over productions with IDs: ";
-                        for (size_t i = 1; i < reductions.size(); i++) {
-                            cerr << reductions[i].first << " ";
-                        }
-                        cerr << std::endl;
-                    }
+                //provjera vrijedi li pravilo a) --//--
+                else if (dka.exists_trans(current, sym)) 
+                {
+                    State nextState = dka.transitions.at(current).at(sym);
                     
-                    // Use the reduction with lowest ID
-                    // Store just "REDUCIRAJ <index>"
-                    akcija[{id_curr, lookahead}] = "REDUCIRAJ " + std::to_string(reductions[0].first);
-                }
+                    if (grammar.isTerminating(sym))
+                        akcija.emplace(key, Action{"POMAKNI", nextState});
+                    else 
+                        novoStanje.emplace(key, Action{"STAVI", nextState});
+                }   
+                //provjerava vrijedi li pravilo b) --//-- ... uz dodatni uvjet prednosti iz uputa labosa
+                else if (item.isComplete()) 
+                {
+                    //kako bi item.after_dot bio jednak produkciji
+                    while (!item.before_dot.empty()) 
+                        item.shift_dot_l();
+                    
+                    //id produkcije
+                    int id = grammar.ID_PRODUKCIJE.at({item.left, item.after_dot});
+
+                    for (const Symbol& lookahead : item.lookahead) 
+                    {
+                        const auto key = pair{current, lookahead};
+                        //razrjesavanje nejednoznacnosti
+                        if (!exists(akcija, key) || akcija.at(key).name != "POMAKNI" && akcija.at(key).id > id)
+                            akcija.emplace(key, Action{"REDUCIRAJ", id});
+                    }
+                }     
             }
-
-
-            
-                
         }
-
     }; 
 
-    // ako S' -> S. i $ je u lookahead ---> onda Prihvati() za (id_curr, $)
-        //     PRIHVATI prioriteti, pazit ako tocka na desnom mjestu.
-        //     edgevi vece prioriteti od onoga kj je u stanju
-        //     ako vise edgeva onda prioriteti
-        // ako A -> a. i B -> g je u lookahead ---> Reduciraj(A -> aBb)
-
-    // void build();
-
-    void outputToFile(const std::string& filename, const Grammar& grammar) const {
+    void outputToFile(const std::string& filename, const Grammar& grammar) const 
+    {
         std::ofstream out(filename);
         
-        out << "SYNC_SYMBOLS:\n";
-        for (const auto& symbol : grammar.SYNC_ZAVRSNI) {
-            out << symbol << "\n";
-        }
+        out << "SYNC_SYMBOLS:" <<endl;
+        for (const Symbol& symbol : grammar.SYNC_ZAVRSNI)
+            out << symbol << endl;
 
-        out << "GRAMMAR_PRODUCTIONS:\n";
-        for (int i=0; i < grammar.ID_global; i++) {
-            auto [left, right] = grammar.ID_PRODUKCIJE_MAPA.at(i);
-            out << i << " " << left << " -> ";
-            for (const auto& s : right) {
-                if(s == right.back()) 
-                    out << s;
-                else
-                    out << s << " ";
-            }
-            out << "\n";
-        }
+        out << "GRAMMAR_PRODUCTIONS:" <<endl;
+        for (const auto& [production, id] : grammar.ID_PRODUKCIJE) 
+            out << id << " " <<production.first << " -> " << concatToString_r(production.second) << endl; //REVERSE
 
-        out << "AKCIJA:\n";
-        for (const auto& [key, value] : akcija) {
-            out << key.first << " " << key.second << " " << value << "\n";
-        }
+        out << "AKCIJA:" <<endl;
+        for (const auto& [key, action] : akcija)
+            out << key.first << " " << key.second << " " << action.toString() << endl;
         
-        out << "NOVO STANJE:\n";
-        for (const auto& [key, value] : novoStanje) {
-            out << key.first << " " << key.second << " " << value << "\n";
-        }
+        out << "NOVO STANJE:" <<endl;
+        for (const auto& [key, action] : novoStanje)
+            out << key.first << " " << key.second << " " << action.toString() << endl;
         
         out.close();
     }
-
 };
 
+bool DEBUG = false;
+std::string input_file = "../test/lab2_teza/03gram100_1/test.san";
 
-bool DEBUG = true;
-
-// ne brisat ovo, koristit cu za testiranje
-void teoMain(){
+int main ()
+{
     // korak 1 - parsiranje gramatike
-    Grammar grammar("cin");
-    cerr << "Grammar parsed" << std::endl;
+    // input_file = "cin";
+    Grammar grammar(input_file);
+    
     // korak 2 - dodajemo novi pocetni znak (zasto ovo nije u konstruktoru?)
     grammar.dodajNoviPocetniZnak(GRAMMAR_NEW_BEGIN_STATE);
-    cerr << "New start symbol added" << std::endl;
-    if (DEBUG){
+    
+    DEBUG = true;
+    if (DEBUG) {
         grammar.dbgPrintFileLines();
         printf("\n");
         grammar.printInfo(); 
-        // cin.get();
     }
-    cerr << "Grammar info printed" << std::endl;
+
     // korak 3 - konstrukcija eNKA iz gramatike
     eNKA enka(grammar);
-    cerr << "eNKA constructed" << std::endl;
+
     // korak 4 - konstrukcija DKA iz eNKA
     DKA dka(enka);
-    cerr << "DKA constructed" << std::endl;
+
     // korak 5 - konstrukcija tablice parsiranja
-    ParsingTable table(dka, grammar); // TODO: fixat ovo
-    cerr << "Parsing table constructed" << std::endl;
+    ParsingTable table(dka, grammar); 
+
     // korak 6 - ispis tablice parsiranja
-    table.outputToFile("analizator/tablica.txt", grammar); // TODO: fixat ovo
+    table.outputToFile("analizator/tablica.txt", grammar);
 }
 
-void teoMain_mockParsingTable(){
+void teoMain_mockParsingTable()
+{
     std::string filePath = "../test/lab2_teza/00aab_1/test.san";
     
     // Grammar grammar("cin");
@@ -240,41 +202,4 @@ void teoMain_mockParsingTable(){
     cerr << "Parsing table constructed" << std::endl;
     
     table.outputToFile("analizator/tablica.txt", grammar);
-}
-
-int main () 
-{
-    // teoMain();
-    teoMain_mockParsingTable();
-
-   
-    std::string file_path = "../test/lab2_teza/01aab_2/test.san";
-
-    Grammar grammar(file_path);
-    
-
-    // korak 2 - dodajemo novi pocetni znak (zasto ovo nije u konstruktoru?)
-
-    // grammar.dodajNoviPocetniZnak(GRAMMAR_NEW_BEGIN_STATE);
-  
-    if (DEBUG){
-        grammar.dbgPrintFileLines();
-        printf("\n");
-        grammar.printInfo();
-    }
-
-    eNKA enka(grammar);
-    DKA dka(enka);
-
-    std::string in = "b <B> a <S> b a b <A>";
-    // cin >>in;
-
-    forEachWord(in, [&dka, &enka](const Symbol& sym){
-        enka.update(sym);
-        dka.update(sym);
-    });
-
-    return 0;
-
-    return 0;
 }
