@@ -6,8 +6,11 @@
 //Dodo sam neka preimenovanja jer mi nisu bila konzistentna
 //States bi trebala biti stanja automata, a Symbols znakovi gramatike, drzimo se toga
 
+using std::endl;
+
 class Grammar
 {
+    int ID_global = 0;
     std::ifstream in;
     bool read_stdin = false;
     bool write_stdout = false;
@@ -20,8 +23,11 @@ public:
     set<Symbol> ZAVRSNI;
     set<Symbol> SYNC_ZAVRSNI;
     map<Symbol, vector<Word>> PRODUKCIJE;
+    
+    map<pair<Symbol, Word>, int> ID_PRODUKCIJE; // extendat za ID od produkcije @ teo
+    
 
-    Grammar(const std::string& inputStream = "cin") 
+    Grammar(const std::string& inputStream/* = "cin"*/) //reference nemre imat default value
     {
         if(inputStream != "cin") 
             in = std::ifstream(inputStream);
@@ -45,7 +51,7 @@ public:
                     else if(line.substr(1, 3) == "Syn") 
                         readSymbol(line, SYNC_ZAVRSNI, 5);
                     else 
-                        cerr << "Error in file\n";          
+                        cerr << "Error in file" <<endl;          
                 }
                 else if(line[0] == '<')
                 {
@@ -67,11 +73,12 @@ public:
                     }
                     production.emplace_back(symbol);
 
-                    PRODUKCIJE[currSymbol].emplace_back(production);
+                    PRODUKCIJE[currSymbol].emplace_back(reverse(production)); //REVERSE
+                    ID_PRODUKCIJE[{currSymbol, production}] = ID_global++;
                 }
                 else
                 {
-                    cerr << "Error in file\n";
+                    cerr << "Error in file" <<endl;
                 }
 
                 fileLines_backup.emplace_back(line);
@@ -79,7 +86,7 @@ public:
             in.close();
         } 
         else
-            cerr << "Unable to open file\n";
+            cerr << "Unable to open file" <<endl;
     }
 
     Symbol readSymbol (const std::string line, set<Symbol>& container, int removeFirst = 3) 
@@ -103,8 +110,8 @@ public:
 
     bool startsWith (const Symbol& sym1, const Symbol& sym2) const 
     {
-        if (!PRODUKCIJE.count(sym1)) 
-            return sym2 == end_sym ? ZAVRSNI.count(sym1) : false;
+        if (sym1 == sym2) return true;
+        if (!PRODUKCIJE.count(sym1)) return false;
 
         for (const Word& produkcija : PRODUKCIJE.at(sym1))
             if (startsWith(produkcija, sym2)) 
@@ -115,8 +122,11 @@ public:
 
     bool startsWith (const Word& word, const Symbol& sym2) const 
     {
-        for (const Symbol& sym1 : word) 
+        //usklađeno radi obrnutosti LR1Stavka.after_dot vectora
+        for (int i = word.size() - 1; i>-1; i--) 
         {
+            const Symbol& sym1 = word[i];
+
             if (startsWith(sym1, sym2)) {
                 if (sym2 == end_sym) continue;
                 else return true;
@@ -138,15 +148,17 @@ public:
     }
 
     set<Symbol> startsWith (const Word& word) const 
-    {
+    {   
         set<Symbol> rez;
 
-        for (const Symbol& sym : word) {
-            make_union(rez, startsWith(sym));
-            if (!isVanishing(sym)) {
-                rez.erase(end_sym);
-                break;
-            }
+        //isto usklađeno...
+        for (int i = word.size() - 1; i>-1; i--) 
+        {
+            const Symbol& sym = word[i];
+
+            rez = make_union(rez, startsWith(sym));
+            
+            if (!isVanishing(sym)) break;
         }
         
         return rez;
@@ -155,18 +167,19 @@ public:
     set<Symbol> startsWith (const Symbol& sym) const 
     {
         if (!PRODUKCIJE.count(sym)) 
-            return ZAVRSNI.count(sym) ? set<Symbol>{sym} : set<Symbol>{end_sym};
+            return ZAVRSNI.count(sym) ? set<Symbol>{sym} : set<Symbol>{};
+        
         set<Symbol> rez;
 
         for (const Word& produkcija : PRODUKCIJE.at(sym))
-            make_union(rez, startsWith(produkcija));
+            rez = make_union(rez, startsWith(produkcija));
         
         return rez;
     }
 
     void dbgPrintFileLines () {
         for(auto l: fileLines_backup){
-            cout << l << "\n";
+            cout << l <<endl;
         }
     }
 
@@ -178,27 +191,29 @@ public:
             cout << s << " ";
         }
 
-        cout << "\nZavrsni: \t";
+        cout <<endl <<"Zavrsni: \t";
         for(auto z: ZAVRSNI)
             cout << z << " ";
 
-        cout << "\nSync Zavrsni: \t";
+        cout <<endl <<"Sync Zavrsni: \t";
         for(auto z: SYNC_ZAVRSNI)
             cout << z << " ";
 
-        cout << "\nProdukcije: \n";
+        cout << endl <<"Produkcije: !" <<endl;
         for(auto p: PRODUKCIJE){
             cout << "  " << p.first << " ::= ";
             for(auto pp: p.second){
-                for(auto z: pp)
+                for(int i = pp.size() -1; i>-1; i--){
+                    const Symbol& z = pp[i];
                     if (z == eps)
                         cout << "\"\" ";
                     else
                         cout << z << " ";
+                }
                 if(pp != p.second.back())
                     cout << "| ";
             }
-            cout << "\n";
+            cout <<endl;
         }
     }
 
@@ -231,7 +246,7 @@ struct LR1Item
     {}
 
     LR1Item (const Symbol& left, const Word& before_dot, const Word& after_dot, const set<Symbol>& lookahead)
-        : left(left), before_dot(before_dot), after_dot(reverse(after_dot)), lookahead(lookahead) 
+        : left(left), before_dot(before_dot), after_dot(after_dot), lookahead(lookahead) 
     {}
     
     bool operator==(const LR1Item& other) const {
