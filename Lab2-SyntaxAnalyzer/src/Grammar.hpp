@@ -10,14 +10,14 @@ using std::endl;
 
 class Grammar
 {
-    int ID_global = 0;
+    
     std::ifstream in;
     bool read_stdin = false;
     bool write_stdout = false;
 private:
     vector<std::string> fileLines_backup;
 public:
-
+    int ID_global = 0;
     Symbol BEGIN_SYMBOL;
     set<Symbol> NEZAVRSNI;
     set<Symbol> ZAVRSNI;
@@ -25,6 +25,7 @@ public:
     map<Symbol, vector<Word>> PRODUKCIJE;
     
     map<pair<Symbol, Word>, int> ID_PRODUKCIJE; // extendat za ID od produkcije @ teo
+    map<int, pair<Symbol, Word>> ID_PRODUKCIJE_MAPA; // extendat za ID od produkcije @ teo
     
 
     Grammar(const std::string& inputStream/* = "cin"*/) //reference nemre imat default value
@@ -75,6 +76,7 @@ public:
 
                     PRODUKCIJE[currSymbol].emplace_back(reverse(production)); //REVERSE
                     ID_PRODUKCIJE[{currSymbol, production}] = ID_global++;
+                    ID_PRODUKCIJE_MAPA[ID_global-1] = {currSymbol, production};
                 }
                 else
                 {

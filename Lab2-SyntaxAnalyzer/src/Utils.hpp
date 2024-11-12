@@ -7,10 +7,12 @@
 #include <map>
 #include <set>
 #include <queue>
+#include <algorithm>
 #include<cstdint>
 #include<memory>
 #include<stdexcept>
 // #include<deque>
+
 
 /*vezano za using namespace std:
     radije ne bi to koristio jer je zbilja teško razlučit što je STL a što 
