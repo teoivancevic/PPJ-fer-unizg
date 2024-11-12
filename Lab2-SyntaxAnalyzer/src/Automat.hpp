@@ -11,7 +11,6 @@ class eNKA
     State ID = 0;
 
 public:
-
     template<typename T>
     using StateMap = map<State, T>;
         //ovo bi mogo biti vektor, ali da izbjegnemo spammanje push_back() i 
@@ -22,42 +21,57 @@ public:
     mutable StateMap<LR1Item> items;
     mutable StateMap<map<Symbol, set<State>>> transitions;
     mutable set<Symbol> symbols;
-    const State q0 = 0;
+    State q0;
+
+//DEBUG
     mutable set<State> currentState;
+    mutable set<LR1Item> currentItems;
 
 public:
-    eNKA() {} //kada je definiran drugi konstruktor default se treba definirati eksplicitno
+    eNKA() {}
 
     eNKA(const Grammar& grammar)
     {
-        queue<LR1Item> generator;
+        queue<State> generator;
         
         const Symbol& S = grammar.BEGIN_SYMBOL;
         symbols.emplace(S);
         
         //dodaje se jedina produkcija po pravilu a) iz skripte
-        generator.emplace(
-            S, grammar.PRODUKCIJE.at(S).at(0), set<Symbol>{end_sym}
-        );
+        generator.emplace(q0 = getState(
+            {S, grammar.PRODUKCIJE.at(S).at(0), {end_sym}}
+        ));
         
+        //za svaku stavku rekurzivno generiranu iz početne:
         while (!generator.empty()) 
         {
 
-            LR1Item item = generator.front();
+            //dohvati se sljedeći stateID
+            State state = generator.front();
+
+            //dohvati se pripadni LR1Item
+            LR1Item item = items.at(state);
             generator.pop();
-            cerr << "item loaded " << std::endl;
-            State state = getState(item);
-            cerr << "state: " << state << std::endl;
+            // cerr << "item loaded " << std::endl;
+//             LR1Item item = generator.front();
+//             generator.pop();
+//             cerr << "item loaded " << std::endl;
+//             State state = getState(item);
+//             cerr << "state: " << state << std::endl;
+
+            //za svaku stavku dobivenu shiftanjem točke u desno:
+
             while (!item.isComplete())
             {
+                //dohvati sljedeći znak iza točke
                 const Symbol& nextSym = item.symbolAfterDot();
                 symbols.emplace(nextSym);
 
-                //beta je niz znakova iza sljedeceg simbola kao u skripti
+                //beta je niz znakova iza sljedeceg simbola kao u skripti str 148
                 const Word& beta = item.shift_dot_r().after_dot;
                 //T je lookahead kao u skripti
                 const set<Symbol> T = 
-                    make_union (
+                    make_union ( //računato po pravilima i) ii) na str 148
                         grammar.startsWith(beta), 
                         (grammar.isVanishing(beta) ? item.lookahead : set<Symbol>{})
                     );
@@ -66,11 +80,14 @@ public:
                 if (grammar.PRODUKCIJE.count(nextSym)) {
                     for (const Word& production : grammar.PRODUKCIJE.at(nextSym)) 
                     {
-                        LR1Item nextItem (nextSym, production, T);
-                        transitions[state][eps].insert(getState(nextItem));
-                        generator.push(std::move(nextItem));
+                        State nextState = getState({nextSym, production, T});
+                        //dodaje se prijelaz
+                        transitions[state][eps].insert(nextState);
+                        //sljedece stanje se stavlja u queue za evaluaciju
+                        if (nextState == ID-1) generator.push(nextState);
                     }
                 }
+              
                 cerr << "enka before insert transition" << std::endl;
                 //dodajem produkciju po pravilu b) str 148 iz skripte
                 transitions[state][nextSym].insert(state = getState(item));
@@ -79,11 +96,12 @@ public:
         }
         cerr << "eNKA constructed, from enka" << std::endl;
 
+        //izračunaj sva eps okruženja
         bool evaluated[ID] = {};
         for (State state = q0; state < ID; state++)
             computeEpsilonEnvironment(state, grammar, evaluated);
         
-        currentState = start();
+        reset();
     }
 
     //poc stanje
@@ -102,6 +120,7 @@ public:
         set<State> result;
 
         for (State state : current) 
+            if (exists_trans(state, sym))
             for (State next : transitions.at(state).at(sym))
                 result.emplace(next);
 
@@ -110,10 +129,12 @@ public:
 
     inline void reset() const {
         currentState = start();
+        currentItems = get_items();
     }
 
     inline void update(const Symbol& sym) const {
-        currentState = get_next(currentState, sym);
+        currentState = eps_of(get_next(currentState, sym));
+        currentItems = get_items();
     }
 
     const set<LR1Item> get_items() const {
@@ -123,6 +144,11 @@ public:
         return rez;
     } 
 
+    //provjera za mape
+    inline bool exists_trans(State state, const Symbol& sym) const {
+        return exists(transitions, state) && exists(transitions.at(state), sym);
+    }
+
     inline std::size_t size() {
         return ID;
     }
@@ -130,7 +156,12 @@ public:
 private:
     set<State>& computeEpsilonEnvironment(State state, const Grammar& grammar, bool* evaluated)
     {
-        set<State>& env = transitions[state][eps];
+        if (!exists_trans(state, eps)) {
+            evaluated[state] = true;
+            return transitions[state][eps] = set<State>{state};
+        }
+        
+        set<State>& env = transitions.at(state).at(eps);
 
         if (!evaluated[state]) 
         {
@@ -141,26 +172,20 @@ private:
                 env = make_union(
                     env, computeEpsilonEnvironment(next, grammar, evaluated)
                 );
+            
+            env.insert(state);
         }
 
         return env;
     }
 
-    //ovo se generalno ne bi trebalo koristit direktno kao ni states
-    State newState(const LR1Item& item) {
-        if (states.count(item)) {
-            // printf("duplicate state: %s\n", item.toString().c_str()); //ne bi se trebalo dogoditi i think
-            return -1;
-        }
-        items[ID] = item;
-        return states[item] = ID++;
-    }
-
     //ovo ili vrati postojeci state il ga na pravi pa vrati
     State getState(const LR1Item& item) {
-        if (states.count(item))
-            return states[item];
-        return newState(item);
+        if (!states.count(item)) {
+            items[ID] = item;
+            states[item] = ID++;
+        }
+        return states[item];
     }
 };
 
@@ -171,57 +196,77 @@ class DKA
 public:
     template<typename T>
     using StateMap = map<State, T>;
+    const State start;
+    mutable State currentState;
 
 // private:
     StateMap<set<LR1Item>> items;
     StateMap<map<Symbol, State>> transitions;
-    State start;
-    mutable State currentState;
+
+//DEBUG
+    mutable set<LR1Item> currentItems;
 
 public:
-    DKA() {}
+    DKA() : start(ID) {}
 
-    DKA(const eNKA& enka) 
+    DKA(const eNKA& enka) : start(ID)
     {
         SetMap<State> mapper;
         queue<set<State>> state_queue;
-        state_queue.push(enka.start());
 
         mapper[enka.start()] = ID++;
+        state_queue.push(enka.start());
 
+        //za svaki pronađeni skup stanja u enka:
         while (!state_queue.empty()) 
         {
+            //dohvati sljedeći skup na redu
             set<State> current = std::move(state_queue.front());
-            State id = mapper[current];    
             state_queue.pop();
 
+            //dohvati DKA id
+            State id = mapper.at(current);
+
+            //dohvati sve LR1Iteme
             for (State state : current)
                 items[id].insert(enka.items.at(state));
-                
+            
+            //pronađi sve prijelaze
             for (const Symbol& sym : enka.symbols) 
             {
-                set<State> next = enka.get_next(current, sym);
-                if (!mapper.count(next)) 
+                set<State> next = enka.eps_of(enka.get_next(current, sym));
+                
+                if (!next.empty()) 
                 {
-                    transitions[id][sym] = ID;
-                    mapper[next] = ID++;
-                    state_queue.emplace(std::move(next));
+                    //ako je već zabilježeno stanje samo dodaj prijelaz, inaće obradi novo stanje
+                    if (exists(mapper, next))
+                        transitions[id][sym] = mapper.at(next);
+                    else {
+                        transitions[id][sym] = ID;
+                        mapper[next] = ID++;
+                        state_queue.emplace(std::move(next));
+                    }
                 }
             }
         }
-    }   
+
+        reset();
+    }
 
     inline void reset() const {
         currentState = start;
+        currentItems = get_items();
     }
 
-    inline void update(const Symbol& sym) const {
-        currentState = transitions.at(currentState).at(sym);
+    inline void update(const Symbol& sym) const 
+    {
+        currentState = (exists_trans(currentState, sym) ? transitions.at(currentState).at(sym) : -1);
+        currentItems = get_items();
     }
 
-    inline const set<LR1Item>& get_items() const {
-        return items.at(currentState);
-    } 
+    inline const set<LR1Item> get_items() const {
+        return (exists(items, currentState) ? items.at(currentState) : set<LR1Item>{});
+    }
 
     inline const set<LR1Item>& itemsAtState(State state) const {
         return items.at(state);
@@ -229,5 +274,10 @@ public:
 
     inline std::size_t size() const {
         return ID;
+    }
+
+    //provjera za mape
+    inline bool exists_trans(State state, const Symbol& sym) const {
+        return exists(transitions, state) && exists(transitions.at(state), sym);
     }
 };
