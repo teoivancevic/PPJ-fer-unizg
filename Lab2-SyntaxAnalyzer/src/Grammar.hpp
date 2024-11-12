@@ -73,7 +73,7 @@ public:
                     }
                     production.emplace_back(symbol);
 
-                    PRODUKCIJE[currSymbol].emplace_back(reverse(production));
+                    PRODUKCIJE[currSymbol].emplace_back(reverse(production)); //REVERSE
                     ID_PRODUKCIJE[{currSymbol, production}] = ID_global++;
                 }
                 else
@@ -246,7 +246,7 @@ struct LR1Item
     {}
 
     LR1Item (const Symbol& left, const Word& before_dot, const Word& after_dot, const set<Symbol>& lookahead)
-        : left(left), before_dot(before_dot), after_dot(reverse(after_dot)), lookahead(lookahead) 
+        : left(left), before_dot(before_dot), after_dot(after_dot), lookahead(lookahead) 
     {}
     
     bool operator==(const LR1Item& other) const {
