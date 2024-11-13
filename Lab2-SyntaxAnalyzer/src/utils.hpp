@@ -8,15 +8,13 @@
 #include <set>
 #include <queue>
 #include <algorithm>
-#include<cstdint>
-#include<memory>
-#include<stdexcept>
+#include <cstdint>
+#include <memory>
+#include <stdexcept>
 
 //možeš ovo tretirat ko obićnu mapu, sam je malo brže
-// template <typename K, typename V, typename Hash = std::hash<K>, typename Compare = std::equal_to<K>>
-// using map = std::unordered_map<K, V, Hash, Compare>;
-using std::map;
 
+using std::map;
 using std::set;
 using std::vector;
 using std::pair;
