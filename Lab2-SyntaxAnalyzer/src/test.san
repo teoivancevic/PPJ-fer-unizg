@@ -2,11 +2,9 @@
 %T a b
 %Syn a
 <S>
- <A> <A> <S>
- <B> <S>
- <A> <A>
- <B>
-<A>
- a
+ <A> a <A> b
+ <B> b <B> a
 <B>
- b
+ $
+<A>
+ $

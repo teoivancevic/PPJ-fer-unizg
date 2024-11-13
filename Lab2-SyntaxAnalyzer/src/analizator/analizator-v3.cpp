@@ -191,25 +191,25 @@ public:
 
     // Debug function to verify loaded data
     void printLoaded() const {
-        std::cout << "SYNC_SYMBOLS:\n";
+        std::cerr << "SYNC_SYMBOLS:\n";
         for (const auto& sym : SYNC_ZAVRSNI) {
-            std::cout << sym << "\n";
+            std::cerr << sym << "\n";
         }
-        std::cout << "\nGRAMMAR_PRODUCTIONS:\n";
+        std::cerr << "\nGRAMMAR_PRODUCTIONS:\n";
         for (const auto& [id, prod] : ID_PRODUKCIJE_MAPA) {
-            std::cout << id << ", " << prod.first << " :== ";
+            std::cerr << id << ", " << prod.first << " :== ";
             for (const auto& s : prod.second) {
-                std::cout << s << ", ";
+                std::cerr << s << ", ";
             }
-            std::cout << "\n";
+            std::cerr << "\n";
         }
-        std::cout << "\nAKCIJA:\n";
+        std::cerr << "\nAKCIJA:\n";
         for (const auto& [key, value] : akcija) {
-            std::cout << key.first << ", " << key.second << ", " << value.first << ", " << value.second << "\n";
+            std::cerr << key.first << ", " << key.second << ", " << value.first << ", " << value.second << "\n";
         }
-        std::cout << "\nNOVO STANJE:\n";
+        std::cerr << "\nNOVO STANJE:\n";
         for (const auto& [key, value] : novoStanje) {
-            std::cout << key.first << ", " << key.second << ", " << value.first << ", " << value.second << "\n";
+            std::cerr << key.first << ", " << key.second << ", " << value.first << ", " << value.second << "\n";
         }
     }
 };
@@ -319,21 +319,28 @@ public:
                 
                 // Create new node for the reduced non-terminal
                 Node* newNode = new Node(production.first);
-                
-                // Pop nodes for each symbol in the production's right-hand side
-                for (size_t j = 0; j < production.second.size(); j++) {
-                    if (nodeStack.size() < 2) {
-                        cerr << "Error: Stack underflow during reduction\n";
-                        return nullptr;
+                if(production.second[0] != "$"){
+                    // Pop nodes for each symbol in the production's right-hand side
+                    for (size_t j = 0; j < production.second.size(); j++) {
+                        if (nodeStack.size() < 2) {
+                            cerr << "Error: Stack underflow during reduction\n";
+                            return nullptr;
+                        }
+                        
+                        nodeStack.pop();  // Pop state
+                        Node* child = nodeStack.top();  // Get symbol
+                        nodeStack.pop();  // Pop symbol
+                        
+                        // Add as child in correct order
+                        newNode->children.insert(newNode->children.begin(), child);
                     }
-                    
-                    nodeStack.pop();  // Pop state
-                    Node* child = nodeStack.top();  // Get symbol
-                    nodeStack.pop();  // Pop symbol
-                    
-                    // Add as child in correct order
-                    newNode->children.insert(newNode->children.begin(), child);
                 }
+                else{
+                    Node* child = new Node("$", "$");
+                    newNode->children.push_back(child);
+                }
+                    
+                
                 
                 // Look up goto action
                 if (nodeStack.empty()) {
@@ -396,7 +403,7 @@ public:
 
 int main() {
     ParsingTableStuff table("tablica.txt");
-    // table.printLoaded();
+    table.printLoaded();
     std::cerr << "Parsing table constructed" << std::endl;
 
     SyntaxAnalyzer analyzer(table);
