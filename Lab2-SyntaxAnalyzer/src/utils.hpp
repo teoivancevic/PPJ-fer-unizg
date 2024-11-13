@@ -99,6 +99,7 @@ struct std::hash<vector<T>> {
 template<typename T>
 using SetMap = map<set<T>, T>;
 
+[[maybe_unused]]
 static int to_int (const std::string& str) {
     int rez = 0;
     for (char digit : str)
@@ -117,6 +118,7 @@ std::string string_format( const std::string& format, Args ... args )
     return std::string( buf.get(), buf.get() + size - 1 ); // We don't want the '\0' inside
 }
 
+[[maybe_unused]]
 static std::string consumeNextWord (std::string& str, char del = ' ') {
     int i;
     std::string word;

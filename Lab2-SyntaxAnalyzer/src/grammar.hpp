@@ -58,16 +58,9 @@ public:
                     Word production = {};
                     Symbol symbolsString = line.substr(1, (int) line.size() - 1);
 
-                    Symbol symbol = "";
-                    for (auto c: symbolsString) {
-                        if (c == ' ') {
-                            production.emplace_back(symbol);
-                            symbol = "";
-                        } else {
-                            symbol += c;
-                        }
-                    }
-                    production.emplace_back(symbol);
+                    consumeEachWord(symbolsString, [&production](const Symbol& sym) {
+                        production.emplace_back(sym);
+                    });
                     //usklađeno radi obrnutosti LR1Stavka.after_dot vectora
                     production = reverse(production); //REVERSE
                     
@@ -87,20 +80,12 @@ public:
     {
         Symbol symbolsString = line.substr(removeFirst, (int) line.size() - removeFirst);
         Symbol firstSymbol = "";
-        Symbol symbol = "";
         
-        for (auto c: symbolsString) {
-            if (c == ' ') {
-                container.emplace(symbol);
-                if (firstSymbol == "") firstSymbol = symbol;
-                symbol = "";
-            } else {
-                symbol += c;
-            }
-        }
-
-        container.emplace(symbol);
-
+        consumeEachWord(symbolsString, [&firstSymbol, &container] (const Symbol& sym){
+            if (firstSymbol == "") firstSymbol = sym;
+            container.emplace(sym);
+        });
+        
         return firstSymbol;
     }
 

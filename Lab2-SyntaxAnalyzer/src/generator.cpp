@@ -60,7 +60,7 @@ struct ParsingTable
                         akcija.emplace(key, Action{"POMAKNI", nextState});
                     else 
                         novoStanje.emplace(key, Action{"STAVI", nextState});
-                }   
+                }
                 //provjerava vrijedi li pravilo b) --//--
                 if (item.isComplete()) 
                 {
@@ -110,20 +110,17 @@ struct ParsingTable
     }
 };
 
-
 std::string input = "cin";
-
 
 int main ()
 {
-    // korak 1 - parsiranje gramatike
+    input = "../test/08pomred/test.san";
 
-    // Grammar grammar(input);
-    Grammar grammar("cin");
+    // korak 1 - parsiranje gramatike
+    Grammar grammar(input);
     
     // korak 2 - dodajemo novi pocetni znak (zasto ovo nije u konstruktoru?)
     grammar.dodajNoviPocetniZnak(GRAMMAR_NEW_BEGIN_STATE);
-
 
     // korak 3 - konstrukcija eNKA iz gramatike
     eNKA enka(grammar);
