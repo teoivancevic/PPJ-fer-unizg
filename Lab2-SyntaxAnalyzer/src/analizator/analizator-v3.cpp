@@ -23,22 +23,28 @@ using Action = std::pair<string, int>;
 
 using Word = vector<Symbol>;
 
+
+
 struct Node {
 public:
     string symbol;
     int state;
     vector<Node*> children;
+    string content;
 
     Node(){
         symbol = "";
         state = -1;
         children = {};
+        content = "";
     }
 
     Node(const string& sym) 
-        : symbol(sym), state(-1), children({}) {}
+        : symbol(sym), state(-1), children({}), content("") {}
+    Node(const string& sym, const string& cont) 
+        : symbol(sym), state(-1), children({}), content(cont) {}
     Node(const int& st) 
-        : symbol(""), state(st), children({}) {}
+        : symbol(""), state(st), children({}), content("") {}
     
     ~Node() {
         for (auto child : children) {
@@ -50,6 +56,35 @@ public:
         return children.empty();
     }
 };
+
+
+void printStackDebug(const stack<Node*>& s) {
+    // We need to make a copy since we can't iterate a stack directly
+    stack<Node*> temp = s;
+    vector<string> elements;
+    
+    // Store elements in reverse order (since stack prints from top)
+    while (!temp.empty()) {
+        Node* node = temp.top();
+        if (node->state != -1) {
+            elements.push_back(std::to_string(node->state));
+        } else {
+            elements.push_back(node->symbol);
+        }
+        temp.pop();
+    }
+    
+    // Print header
+    cerr << "\n=== Stack Bottom ===\n";
+    
+    // Print in correct order (bottom to top)
+    for (int i = elements.size() - 1; i >= 0; i--) {
+        cerr << elements[i] << " ";
+    }
+    cerr << "\n";
+    
+    cerr << "=== Stack Top ===\n\n";
+}
 
 class ParsingTableStuff {
 public:
@@ -187,63 +222,169 @@ public:
     
     SyntaxAnalyzer(const ParsingTableStuff& table) : table(table) {}
     
-    void cinAndPrint(){
+    Node* cinAndPrint() {
         stack<Node*> nodeStack;
         nodeStack.emplace(new Node(0));
 
-        // getline from cin
-        string inputLine;
-        while (getline(std::cin, inputLine)) {
+        string inputLineTemp;
+        vector<string> inputLines;
+        while(getline(std::cin, inputLineTemp)) {
+            inputLines.push_back(inputLineTemp);
+            cerr << "Line: " << inputLineTemp << '\n';
+        }
+
+        inputLines.push_back("$");
+        Node* rootNode = nullptr;
+        
+        int i = 0;
+        while (i < inputLines.size()) {
+            printStackDebug(nodeStack);
+            
+            if (nodeStack.empty()) {
+                cerr << "Error: Stack is empty\n";
+                return nullptr;
+            }
+
+            string inputLine = inputLines[i];
             std::istringstream iss(inputLine);
             string symbol;
             iss >> symbol;
             
-            Node* node = nodeStack.top();
-            auto actionIt = table.akcija.find({node->state, symbol});
+            Node* currentState = nodeStack.top();
+            cerr << "Vrh stoga i ulazni simbol: " << currentState->state << " --- " << symbol << '\n';
+            
+            // Look up action in parsing table
+            auto actionIt = table.akcija.find({currentState->state, symbol});
             if (actionIt == table.akcija.end()) {
-                // NEMA DEFINIRANE AKCIJE
-                // oporavak od pogreske?
-                cerr << "NEMA DEFINIRANE AKCIJE // oporavak od pogreske?" << '\n';
+                cerr << "Error recovery: No action defined for state " << currentState->state 
+                    << " and symbol " << symbol << '\n';
+                
+                // Error recovery using sync sets
+                if (table.SYNC_ZAVRSNI.find(symbol) != table.SYNC_ZAVRSNI.end()) {
+                    cerr << "Found sync symbol '" << symbol << "', attempting recovery...\n";
+                    
+                    // Pop states until we find one that can handle this sync symbol
+                    bool recovered = false;
+                    while (!nodeStack.empty()) {
+                        Node* state = nodeStack.top();
+                        auto recoveryAction = table.akcija.find({state->state, symbol});
+                        if (recoveryAction != table.akcija.end()) {
+                            cerr << "Recovery successful at state " << state->state << '\n';
+                            recovered = true;
+                            break;
+                        }
+                        cerr << "Popping state " << state->state << " during recovery\n";
+                        nodeStack.pop();
+                    }
+                    
+                    if (!recovered) {
+                        cerr << "Error recovery failed - could not find suitable state\n";
+                        return nullptr;
+                    }
+                    continue;  // Try parsing again with the current symbol
+                }
+                
+                // Skip erroneous input if not a sync symbol
+                cerr << "Skipping invalid input: " << symbol << '\n';
+                i++;
+                continue;
             }
 
-            string action = actionIt->second.first; // ovo je string koji opisuje akciju
-            int id_next = actionIt->second.second; // ovo je id stanja na koje treba preci
+            string action = actionIt->second.first;
+            int actionValue = actionIt->second.second;
+            
             if (action == "POMAKNI") {
-                cerr << "POMAKNI " << id_next << '\n';
-                nodeStack.emplace(new Node(inputLine));
-                nodeStack.emplace(new Node(id_next));
-            } else if (action == "REDUCIRAJ") {
-                cerr << "REDUCIRAJ " << id_next << '\n';
-                auto production = table.ID_PRODUKCIJE_MAPA.at(id_next);
-                Node *newNode = new Node(production.first); // novi "parent" node
+                cerr << "POMAKNI " << actionValue << '\n';
                 
-                for (int i = 0; i < production.second.size(); i++) { // broj elemenata u desnoj strani produkcije
-                    nodeStack.pop(); // makni stanje
-                    newNode->children.insert(newNode->children.begin(), nodeStack.top()); // makni symbol i stavi ga u novi node kao child
+                // Create new nodes for symbol and state
+                Node* symbolNode = new Node(symbol, inputLine);
+                Node* newStateNode = new Node(actionValue);
+                
+                // Push in correct order
+                nodeStack.emplace(symbolNode);
+                nodeStack.emplace(newStateNode);
+                i++;
+                
+            } else if (action == "REDUCIRAJ") {
+                cerr << "REDUCIRAJ " << actionValue << '\n';
+                
+                // Get production rule
+                auto production = table.ID_PRODUKCIJE_MAPA.at(actionValue);
+                cerr << "Reducing using production " << actionValue << ": " 
+                    << production.first << " -> ";
+                for (const auto& sym : production.second) {
+                    cerr << sym << " ";
                 }
-                // nodeStack.emplace(newNode); 
-                auto newStateIt = table.novoStanje.find({nodeStack.top()->state, production.first}); // novo stanje
-                if (newStateIt == table.novoStanje.end()) {
-                    cerr << "Odbaci usred redukcije????" << '\n';
+                cerr << '\n';
+                
+                // Create new node for the reduced non-terminal
+                Node* newNode = new Node(production.first);
+                
+                // Pop nodes for each symbol in the production's right-hand side
+                for (size_t j = 0; j < production.second.size(); j++) {
+                    if (nodeStack.size() < 2) {
+                        cerr << "Error: Stack underflow during reduction\n";
+                        return nullptr;
+                    }
+                    
+                    nodeStack.pop();  // Pop state
+                    Node* child = nodeStack.top();  // Get symbol
+                    nodeStack.pop();  // Pop symbol
+                    
+                    // Add as child in correct order
+                    newNode->children.insert(newNode->children.begin(), child);
                 }
-                else if(newStateIt->second.first == "STAVI"){
-                    nodeStack.emplace(newNode); // stavi novi node na stog
+                
+                // Look up goto action
+                if (nodeStack.empty()) {
+                    cerr << "Error: Stack empty before goto\n";
+                    return nullptr;
                 }
+                
+                auto gotoIt = table.novoStanje.find({nodeStack.top()->state, newNode->symbol});
+                if (gotoIt == table.novoStanje.end()) {
+                    cerr << "Error: No goto action found for state " << nodeStack.top()->state 
+                        << " and symbol " << newNode->symbol << '\n';
+                    return nullptr;
+                }
+                
+                cerr << "Goto: State " << nodeStack.top()->state 
+                    << " with " << newNode->symbol 
+                    << " -> " << gotoIt->second.second << '\n';
+                
+                if (gotoIt->second.first == "STAVI") {
+                    nodeStack.emplace(newNode);
+                    nodeStack.emplace(new Node(gotoIt->second.second));
+                }
+                
+                rootNode = newNode;
+                
             } else if (action == "PRIHVATI") {
                 cerr << "PRIHVATI" << '\n';
-                return;
+                return rootNode;
             } else {
                 cerr << "Error: Unknown action " << action << '\n';
-                return;
+                return nullptr;
             }
-            
         }
 
+        cerr << "Warning: Reached end of input without explicit accept\n";
+        return rootNode;
     }
 
     void printFromRoot(Node* root, int depth = 0) {
-        if (!root) return;
-        std::cout << string(depth, ' ') << root->symbol << '\n';
+        if (!root) return;  // Add this check to prevent segmentation fault
+        
+        // Print indentation and symbol
+        if(root->isTerminal()){
+            std::cout << string(depth, ' ') << root->content;
+        }
+        else{
+            std::cout << string(depth, ' ') << root->symbol;
+        }
+        std::cout << '\n';
+        
+        // Recursively print all children
         for (auto child : root->children) {
             printFromRoot(child, depth + 1);
         }
@@ -251,14 +392,18 @@ public:
 };
 
 
+
+
 int main() {
     ParsingTableStuff table("tablica.txt");
-    table.printLoaded();
-
+    // table.printLoaded();
     std::cerr << "Parsing table constructed" << std::endl;
 
     SyntaxAnalyzer analyzer(table);
-    analyzer.cinAndPrint();
+    cerr << "Analyzer constructed" << std::endl;
+    Node* root = analyzer.cinAndPrint();
+
+    analyzer.printFromRoot(root);
 
     
     return 0;
