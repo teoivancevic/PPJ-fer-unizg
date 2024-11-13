@@ -50,9 +50,10 @@ struct ParsingTable
                 if (item.left == GRAMMAR_NEW_BEGIN_STATE && sym == end_sym) 
                 {
                     akcija.emplace(key, Action{"PRIHVATI"});
+                    continue;
                 }
                 //provjera vrijedi li pravilo a) --//--
-                else if (dka.exists_trans(current, sym) && !item.isComplete()) 
+                if (dka.exists_trans(current, sym)) 
                 {
                     State nextState = dka.transitions.at(current).at(sym);
                     
@@ -62,7 +63,7 @@ struct ParsingTable
                         novoStanje.emplace(key, Action{"STAVI", nextState});
                 }   
                 //provjerava vrijedi li pravilo b) --//-- ... uz dodatni uvjet prednosti iz uputa labosa
-                else if (item.isComplete()) 
+                if (item.isComplete()) 
                 {
                     //kako bi item.after_dot bio jednak produkciji
                     while (!item.before_dot.empty()) 
@@ -176,7 +177,7 @@ void teoMain_mockParsingTable()
     table.outputToFile("analizator/tablica.txt", grammar);
 }
 
-std::string input_file = "../test/09redred/test.san";
+std::string input_file = "../test/21lr1/test.san";
 
 int main ()
 {
@@ -204,7 +205,7 @@ int main ()
     ParsingTable table(dka, grammar); 
 
     // korak 6 - ispis tablice parsiranja
-    table.outputToFile("analizator/tablica.txt", grammar);
+    table.outputToFile("analizator/tablica2.txt", grammar);
     
     return 0;
 }
