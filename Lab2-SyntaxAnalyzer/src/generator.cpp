@@ -1,8 +1,8 @@
 #include <iostream>
 #include <fstream>
-#include "Utils.hpp"
-#include "Automat.hpp"
-#include "Grammar.hpp"
+#include "utils.hpp"
+#include "automat.hpp"
+#include "grammar.hpp"
 
 struct Action 
 {
@@ -51,7 +51,7 @@ struct ParsingTable
                     akcija.emplace(key, Action{"PRIHVATI"});
                     continue;
                 }
-                //provjera vrijedi li pravilo a) --//--
+                //provjera vrijedi li pravilo a) --//-- ... uz dodatni uvjet prednosti iz uputa labosa
                 if (dka.exists_trans(current, sym)) 
                 {
                     State nextState = dka.transitions.at(current).at(sym);
@@ -61,7 +61,7 @@ struct ParsingTable
                     else 
                         novoStanje.emplace(key, Action{"STAVI", nextState});
                 }   
-                //provjerava vrijedi li pravilo b) --//-- ... uz dodatni uvjet prednosti iz uputa labosa
+                //provjerava vrijedi li pravilo b) --//--
                 if (item.isComplete()) 
                 {
                     //kako bi item.after_dot bio jednak produkciji
@@ -74,6 +74,7 @@ struct ParsingTable
                     for (const Symbol& lookahead : item.lookahead) 
                     {
                         const auto key = pair{current, lookahead};
+                        
                         //razrjesavanje nejednoznacnosti
                         if (exists(akcija, key) && akcija.at(key).name != "POMAKNI" && akcija.at(key).id > id)
                             akcija[key] = Action{"REDUCIRAJ", id};
@@ -105,7 +106,6 @@ struct ParsingTable
         for (const auto& [key, action] : novoStanje)
             out << key.first << " " << key.second << " " << action.toString() << endl;
 
-        
         out.close();
     }
 };

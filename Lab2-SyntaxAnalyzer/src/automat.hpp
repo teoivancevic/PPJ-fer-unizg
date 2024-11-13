@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Utils.hpp"
-#include "Grammar.hpp"
+#include "utils.hpp"
+#include "grammar.hpp"
 
 class eNKA 
 {
@@ -10,8 +10,8 @@ class eNKA
 public:
     template<typename T>
     using StateMap = map<State, T>;
-        //ovo bi mogo biti vektor, ali da izbjegnemo spammanje push_back() i 
-        //potencijalan illegal mem access ovo je safer, plus lakše je adaptirat ako State nije int
+        //ovo bi mogo biti vektor, ali da izbjegnemo spammanje push_back()
+        //plus lakše je adaptirat ako State nije int
 
 //READ ONLY, public za easy access
     mutable map<LR1Item, State> states; //pretvorba LR1Item -> State

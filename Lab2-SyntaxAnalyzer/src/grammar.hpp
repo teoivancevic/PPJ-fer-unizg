@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Utils.hpp"
+#include "utils.hpp"
 #include <fstream>
 
 class Grammar
@@ -8,9 +8,6 @@ class Grammar
     std::ifstream in;
     bool read_stdin = false;
     bool write_stdout = false;
-
-private:
-    vector<std::string> fileLines_backup;
 
 public:
     Symbol BEGIN_SYMBOL;
@@ -25,18 +22,15 @@ public:
     mutable map<pair<Symbol, Symbol>, bool> BEGINS_WITH; 
     mutable map<Symbol, set<Symbol>> BEGINS_WITH_ALL; 
     
-    bool isTerminating(const Symbol& sym) const {
-        return (bool) ZAVRSNI.count(sym);
-    }
-
     Grammar(const std::string& inputStream)
     {
         if(inputStream != "cin") 
             in = std::ifstream(inputStream);
         else 
             read_stdin = true;
-        // std::ifstream file(filePath);
+        
         std::string line;
+        
         #define GEN_IN (read_stdin ? std::cin : in), line
 
         if (read_stdin || in.is_open())
@@ -82,8 +76,6 @@ public:
                 }
                 else
                     cerr << "Error in file" <<endl;
-
-                fileLines_backup.emplace_back(line);
             }
             in.close();
         } 
@@ -96,6 +88,7 @@ public:
         Symbol symbolsString = line.substr(removeFirst, (int) line.size() - removeFirst);
         Symbol firstSymbol = "";
         Symbol symbol = "";
+        
         for (auto c: symbolsString) {
             if (c == ' ') {
                 container.emplace(symbol);
@@ -105,6 +98,7 @@ public:
                 symbol += c;
             }
         }
+
         container.emplace(symbol);
 
         return firstSymbol;
@@ -183,10 +177,16 @@ public:
                 set<Symbol> rez;
                 for (const Word& produkcija : PRODUKCIJE.at(sym))
                     rez = make_union(rez, startsWith(produkcija));
+                
+                BEGINS_WITH_ALL[sym] = rez;
             }
         }
 
         return BEGINS_WITH_ALL.at(sym);
+    }
+
+    inline bool isTerminating(const Symbol& sym) const {
+        return (bool) ZAVRSNI.count(sym);
     }
 
     void dodajNoviPocetniZnak (const Symbol& newStartSym)
