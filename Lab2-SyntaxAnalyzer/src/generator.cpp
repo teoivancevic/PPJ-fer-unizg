@@ -110,16 +110,20 @@ struct ParsingTable
     }
 };
 
+
 std::string input = "cin";
-// input = "../test/11minusLang_2/test.san";
+
 
 int main ()
 {
     // korak 1 - parsiranje gramatike
-    Grammar grammar(input);
+
+    // Grammar grammar(input);
+    Grammar grammar("cin");
     
     // korak 2 - dodajemo novi pocetni znak (zasto ovo nije u konstruktoru?)
     grammar.dodajNoviPocetniZnak(GRAMMAR_NEW_BEGIN_STATE);
+
 
     // korak 3 - konstrukcija eNKA iz gramatike
     eNKA enka(grammar);
