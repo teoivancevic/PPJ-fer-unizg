@@ -11,30 +11,20 @@
 #include<cstdint>
 #include<memory>
 #include<stdexcept>
-// #include<deque>
-
-
-/*vezano za using namespace std:
-    radije ne bi to koristio jer je zbilja teško razlučit što je STL a što 
-    naš kod. Umjesto tog koristi aliase kao ispod. 
-*/
 
 //možeš ovo tretirat ko obićnu mapu, sam je malo brže
 // template <typename K, typename V, typename Hash = std::hash<K>, typename Compare = std::equal_to<K>>
 // using map = std::unordered_map<K, V, Hash, Compare>;
 using std::map;
 
-//ovo su stvari koje često kostistimo pa je ok uvest ih iz namespacea, 
-//ali string namjerno nisam stavio da se sjetimo koristi aliase
 using std::set;
 using std::vector;
 using std::pair;
 using std::queue;
 
 //ovo bi vjv trebalo definirati lokalno u klasama, ali se koriste dovoljno često izvan klasa pa je ok
-using Symbol = std::string; //ovo treba razlikovati od std::string jer bi se trebalo koristiti samo u kontekstu gramatike (zato bi bilo bolje da je u klasi ali ok)
+using Symbol = std::string;
 using State = int;
-// using Action = std::pair<std::enum<>, int>; //--//--
 using Word = vector<Symbol>;
 
 static const Symbol GRAMMAR_NEW_BEGIN_STATE = "<<S'>>";
@@ -177,11 +167,11 @@ inline bool exists(const map<K, T>& m, const K& state) {
 }
 
 template<template <typename, typename...> class container, typename T, typename ...Args>
-std::string concatToString_r (const container<T, Args...>& c) {
+std::string concatToString_r (const container<T, Args...>& c, const std::string delim = " ") {
     std::string rez = "";
     for (int i = (int) c.size() - 1; i > -1; i--) {
         rez += c[i];
-        if (i) rez += " ";
+        if (i) rez += delim;
     }
     return rez;
 }

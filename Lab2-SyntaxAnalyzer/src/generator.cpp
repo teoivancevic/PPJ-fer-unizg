@@ -4,9 +4,8 @@
 #include "Automat.hpp"
 #include "Grammar.hpp"
 
-bool DEBUG = false;
-
-struct Action {
+struct Action 
+{
     std::string name;
     int id;
 
@@ -111,89 +110,16 @@ struct ParsingTable
     }
 };
 
-void teoMain_mockParsingTable()
-{
-    std::string filePath = "../test/lab2_teza/00aab_1/test.san";
-    
-    // Grammar grammar("cin");
-    Grammar grammar(filePath);
-    grammar.dodajNoviPocetniZnak(GRAMMAR_NEW_BEGIN_STATE);
-    if(DEBUG){
-        grammar.dbgPrintFileLines();
-        printf("\n");
-        grammar.printInfo();
-    }
-    cerr << "Grammar parsed" << std::endl;
-    ParsingTable table;
-
-    // note: ova tablica je glupost napisana, samo kako bi se testirao output u txt file
-    //      i da se onda moze testirat parsiranje iz txt filea u analizatoru
-    table.akcija[{0, "a"}] = "POMAKNI 2";    // on 'a', shift to state 2
-    table.akcija[{0, "b"}] = "POMAKNI 3";    // on 'b', shift to state 3
-    table.novoStanje[{0, "S"}] = "STAVI 1";  // on S, goto state 1
-    table.novoStanje[{0, "A"}] = "STAVI 4";  // on A, goto state 4
-    table.novoStanje[{0, "B"}] = "STAVI 5";  // on B, goto state 5
-
-    // State 1: after seeing <S>
-    table.akcija[{1, "$"}] = "PRIHVATI";     // accept if we see end marker
-
-    // State 2: after seeing 'a'
-    table.akcija[{2, "a"}] = "REDUCIRAJ 1";  // reduce A ::= a
-    table.akcija[{2, "b"}] = "REDUCIRAJ 1";  // reduce A ::= a
-    table.akcija[{2, "$"}] = "REDUCIRAJ 1";  // reduce A ::= a
-
-    // State 3: after seeing 'b'
-    table.akcija[{3, "a"}] = "REDUCIRAJ 2";  // reduce B ::= b
-    table.akcija[{3, "b"}] = "REDUCIRAJ 2";  // reduce B ::= b
-    table.akcija[{3, "$"}] = "REDUCIRAJ 2";  // reduce B ::= b
-
-    // State 4: after seeing <A>
-    table.akcija[{4, "a"}] = "POMAKNI 2";    // on 'a', shift to state 2
-    table.novoStanje[{4, "A"}] = "STAVI 6";  // on A, goto state 6
-
-    // State 5: after seeing <B>
-    table.akcija[{5, "a"}] = "REDUCIRAJ 6";  // reduce S ::= B
-    table.akcija[{5, "b"}] = "REDUCIRAJ 6";  // reduce S ::= B
-    table.akcija[{5, "$"}] = "REDUCIRAJ 6";  // reduce S ::= B
-    table.novoStanje[{5, "S"}] = "STAVI 7";  // on S, goto state 7
-
-    // State 6: after seeing <A><A>
-    table.akcija[{6, "a"}] = "POMAKNI 2";    // on 'a', shift to state 2
-    table.akcija[{6, "b"}] = "POMAKNI 3";    // on 'b', shift to state 3
-    table.novoStanje[{6, "S"}] = "STAVI 8";  // on S, goto state 8
-
-    // State 7: after seeing <B><S>
-    table.akcija[{7, "a"}] = "REDUCIRAJ 4";  // reduce S ::= B S
-    table.akcija[{7, "b"}] = "REDUCIRAJ 4";  // reduce S ::= B S
-    table.akcija[{7, "$"}] = "REDUCIRAJ 4";  // reduce S ::= B S
-
-    // State 8: after seeing <A><A><S>
-    table.akcija[{8, "a"}] = "REDUCIRAJ 3";  // reduce S ::= A A S
-    table.akcija[{8, "b"}] = "REDUCIRAJ 3";  // reduce S ::= A A S
-    table.akcija[{8, "$"}] = "REDUCIRAJ 3"; 
-    
-    cerr << "Parsing table constructed" << std::endl;
-    
-    table.outputToFile("analizator/tablica.txt", grammar);
-}
-
-std::string input_file = "../test/21lr1/test.san";
+std::string input = "cin";
+// input = "../test/11minusLang_2/test.san";
 
 int main ()
 {
     // korak 1 - parsiranje gramatike
-    // input_file = "cin";
-    Grammar grammar(input_file);
+    Grammar grammar(input);
     
     // korak 2 - dodajemo novi pocetni znak (zasto ovo nije u konstruktoru?)
     grammar.dodajNoviPocetniZnak(GRAMMAR_NEW_BEGIN_STATE);
-    
-    DEBUG = true;
-    if (DEBUG) {
-        grammar.dbgPrintFileLines();
-        printf("\n");
-        grammar.printInfo(); 
-    }
 
     // korak 3 - konstrukcija eNKA iz gramatike
     eNKA enka(grammar);
@@ -205,7 +131,7 @@ int main ()
     ParsingTable table(dka, grammar); 
 
     // korak 6 - ispis tablice parsiranja
-    table.outputToFile("analizator/tablica2.txt", grammar);
+    table.outputToFile("analizator/tablica.txt", grammar);
     
     return 0;
 }

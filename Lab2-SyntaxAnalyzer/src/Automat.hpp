@@ -3,9 +3,6 @@
 #include "Utils.hpp"
 #include "Grammar.hpp"
 
-//Kužim što si radio s LRItem, ali da pojednostavimo stvari, lakše je mapirati ih u brojeve i onda koristiti njih kao State
-
-//PROVJERI:
 class eNKA 
 {
     State ID = 0;
@@ -22,10 +19,6 @@ public:
     mutable StateMap<map<Symbol, set<State>>> transitions;
     mutable set<Symbol> symbols;
     State q0;
-
-//DEBUG
-    mutable set<State> currentState;
-    mutable set<LR1Item> currentItems;
 
 public:
     eNKA() {}
@@ -89,8 +82,6 @@ public:
         bool evaluated[ID] = {};
         for (State state = 0; state < (int) size(); state++)
             computeEpsilonEnvironment(state, grammar, evaluated);
-        
-        reset();
     }
 
     //poc stanje
@@ -115,23 +106,6 @@ public:
 
         return result;
     }
-
-    inline void reset() const {
-        currentState = start();
-        currentItems = get_items();
-    }
-
-    inline void update(const Symbol& sym) const {
-        currentState = eps_of(get_next(currentState, sym));
-        currentItems = get_items();
-    }
-
-    const set<LR1Item> get_items() const {
-        set<LR1Item> rez;
-        for (State state : currentState) 
-            rez.emplace(items[state]);
-        return rez;
-    } 
 
     //provjera za mape
     inline bool exists_trans(State state, const Symbol& sym) const {
@@ -186,14 +160,10 @@ public:
     template<typename T>
     using StateMap = map<State, T>;
     const State start;
-    mutable State currentState;
 
 // private:
     StateMap<set<LR1Item>> items;
     StateMap<map<Symbol, State>> transitions;
-
-//DEBUG
-    mutable set<LR1Item> currentItems;
 
 public:
     DKA() : start(ID) {}
@@ -238,23 +208,6 @@ public:
                 }
             }
         }
-
-        reset();
-    }
-
-    inline void reset() const {
-        currentState = start;
-        currentItems = get_items();
-    }
-
-    inline void update(const Symbol& sym) const 
-    {
-        currentState = (exists_trans(currentState, sym) ? transitions.at(currentState).at(sym) : -1);
-        currentItems = get_items();
-    }
-
-    inline const set<LR1Item> get_items() const {
-        return (exists(items, currentState) ? items.at(currentState) : set<LR1Item>{});
     }
 
     inline const set<LR1Item>& itemsAtState(State state) const {
