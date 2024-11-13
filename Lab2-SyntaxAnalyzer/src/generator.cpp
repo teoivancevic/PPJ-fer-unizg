@@ -5,6 +5,8 @@
 #include "Grammar.hpp"
 
 
+bool DEBUG = false;
+
 struct Action {
     std::string name;
     int id;
@@ -121,38 +123,6 @@ struct ParsingTable
     }
 };
 
-bool DEBUG = false;
-std::string input_file = "../test/lab2_teza/03gram100_1/test.san";
-
-int main ()
-{
-    // korak 1 - parsiranje gramatike
-    // input_file = "cin";
-    Grammar grammar(input_file);
-    
-    // korak 2 - dodajemo novi pocetni znak (zasto ovo nije u konstruktoru?)
-    grammar.dodajNoviPocetniZnak(GRAMMAR_NEW_BEGIN_STATE);
-    
-    DEBUG = true;
-    if (DEBUG) {
-        grammar.dbgPrintFileLines();
-        printf("\n");
-        grammar.printInfo(); 
-    }
-
-    // korak 3 - konstrukcija eNKA iz gramatike
-    eNKA enka(grammar);
-
-    // korak 4 - konstrukcija DKA iz eNKA
-    DKA dka(enka);
-
-    // korak 5 - konstrukcija tablice parsiranja
-    ParsingTable table(dka, grammar); 
-
-    // korak 6 - ispis tablice parsiranja
-    table.outputToFile("analizator/tablica.txt", grammar);
-}
-
 void teoMain_mockParsingTable()
 {
     std::string filePath = "../test/lab2_teza/00aab_1/test.san";
@@ -219,9 +189,43 @@ void teoMain_mockParsingTable()
     table.outputToFile("analizator/tablica.txt", grammar);
 }
 
-int main () 
+
+
+// std::string input_file = "../test/lab2_teza/03gram100_1/test.san";
+
+int main ()
 {
-    teoMain();
+    // korak 1 - parsiranje gramatike
+    // input_file = "cin";
+    Grammar grammar("cin");
+    
+    // korak 2 - dodajemo novi pocetni znak (zasto ovo nije u konstruktoru?)
+    grammar.dodajNoviPocetniZnak(GRAMMAR_NEW_BEGIN_STATE);
+    
+    if (DEBUG) {
+        grammar.dbgPrintFileLines();
+        printf("\n");
+        grammar.printInfo(); 
+    }
+
+    // korak 3 - konstrukcija eNKA iz gramatike
+    eNKA enka(grammar);
+
+    // korak 4 - konstrukcija DKA iz eNKA
+    DKA dka(enka);
+
+    // korak 5 - konstrukcija tablice parsiranja
+    ParsingTable table(dka, grammar); 
+
+    // korak 6 - ispis tablice parsiranja
+    table.outputToFile("analizator/tablica.txt", grammar);
+    
+    return 0;
+}
+
+int oldMain () 
+{
+    // teoMain();
     // teoMain_mockParsingTable();
     cin.get();
 

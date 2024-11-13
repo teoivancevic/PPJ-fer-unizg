@@ -8,6 +8,8 @@
 #include <stack>
 
 
+using std::cerr;
+
 using std::map;
 using std::set;
 using std::vector;
@@ -20,23 +22,34 @@ using State = int;
 using Action = std::pair<string, int>;
 
 using Word = vector<Symbol>;
-// First, let's define the tree node structure
-class GenTreeNode {
-public:
-    Symbol symbol;              // Terminal or non-terminal symbol
-    vector<GenTreeNode*> children;
-    string line;               // For terminals: line number
-    string value;              // For terminals: actual value
 
-    GenTreeNode(const Symbol& sym) : symbol(sym) {}
+struct Node {
+public:
+    string symbol;
+    int state;
+    vector<Node*> children;
+
+    Node(){
+        symbol = "";
+        state = -1;
+        children = {};
+    }
+
+    Node(const string& sym) 
+        : symbol(sym), state(-1), children({}) {}
+    Node(const int& st) 
+        : symbol(""), state(st), children({}) {}
     
-    ~GenTreeNode() {
+    ~Node() {
         for (auto child : children) {
             delete child;
         }
     }
-};
 
+    bool isTerminal() const {
+        return children.empty();
+    }
+};
 
 class ParsingTableStuff {
 public:
@@ -167,120 +180,86 @@ public:
 };
 
 class SyntaxAnalyzer {
-public:
-    SyntaxAnalyzer(const ParsingTableStuff& table) : table(table) {}
-
-    GenTreeNode* parse(const string& input_filename) {
-        vector<pair<string, pair<int, string>>> tokens = readTokens(input_filename);
-        
-        stack<int> stateStack;
-        stack<GenTreeNode*> symbolStack;
-        
-        stateStack.push(0);  // Initial state
-        int currentToken = 0;
-        
-        while (currentToken <= tokens.size()) {
-            int currentState = stateStack.top();
-            Symbol currentSymbol = (currentToken == tokens.size()) ? "$" : 
-                                 tokens[currentToken].first;
-            
-            auto actionIt = table.akcija.find({currentState, currentSymbol});
-            if (actionIt == table.akcija.end()) {
-                handleError(currentState, currentSymbol, tokens[currentToken].second.first);
-                currentToken++;
-                continue;
-            }
-            
-            string action = actionIt->second;
-            if (action.substr(0, 7) == "POMAKNI") {
-                int nextState = stoi(action.substr(8));
-                GenTreeNode* node = new GenTreeNode(currentSymbol);
-                node->line = to_string(tokens[currentToken].second.first);
-                node->value = tokens[currentToken].second.second;
-                
-                symbolStack.push(node);
-                stateStack.push(nextState);
-                currentToken++;
-            }
-            else if (action.substr(0, 8) == "REDUCIRAJ") {
-                int prodId = stoi(action.substr(9));
-                auto [left, right] = table.ID_PRODUKCIJE_MAPA.at(prodId);
-                
-                GenTreeNode* newNode = new GenTreeNode(left);
-                
-                // Pop right-hand side symbols and states
-                for (int i = 0; i < right.size(); i++) {
-                    stateStack.pop();
-                    GenTreeNode* child = symbolStack.top();
-                    symbolStack.pop();
-                    newNode->children.insert(newNode->children.begin(), child);
-                }
-                
-                // Get new state from NOVO_STANJE table
-                int currentState = stateStack.top();
-                auto novoStanjeIt = table.novoStanje.find({currentState, left});
-                if (novoStanjeIt != table.novoStanje.end()) {
-                    string newStateAction = novoStanjeIt->second;
-                    int newState = stoi(newStateAction.substr(6));
-                    symbolStack.push(newNode);
-                    stateStack.push(newState);
-                }
-            }
-            else if (action == "PRIHVATI") {
-                return symbolStack.top();
-            }
-        }
-        
-        return nullptr;
-    }
-
 private:
     const ParsingTableStuff& table;
+    
+public:
+    
+    SyntaxAnalyzer(const ParsingTableStuff& table) : table(table) {}
+    
+    void cinAndPrint(){
+        stack<Node*> nodeStack;
+        nodeStack.emplace(new Node(0));
 
-    vector<pair<string, pair<int, string>>> readTokens(const string& filename) {
-        vector<pair<string, pair<int, string>>> tokens;
-        ifstream in(filename);
-        string token, line, value;
-        
-        while (in >> token >> line >> value) {
-            tokens.push_back({token, {stoi(line), value}});
+        // getline from cin
+        string inputLine;
+        while (getline(std::cin, inputLine)) {
+            std::istringstream iss(inputLine);
+            string symbol;
+            iss >> symbol;
+            
+            Node* node = nodeStack.top();
+            auto actionIt = table.akcija.find({node->state, symbol});
+            if (actionIt == table.akcija.end()) {
+                // NEMA DEFINIRANE AKCIJE
+                // oporavak od pogreske?
+                cerr << "NEMA DEFINIRANE AKCIJE // oporavak od pogreske?" << '\n';
+            }
+
+            string action = actionIt->second.first; // ovo je string koji opisuje akciju
+            int id_next = actionIt->second.second; // ovo je id stanja na koje treba preci
+            if (action == "POMAKNI") {
+                cerr << "POMAKNI " << id_next << '\n';
+                nodeStack.emplace(new Node(inputLine));
+                nodeStack.emplace(new Node(id_next));
+            } else if (action == "REDUCIRAJ") {
+                cerr << "REDUCIRAJ " << id_next << '\n';
+                auto production = table.ID_PRODUKCIJE_MAPA.at(id_next);
+                Node *newNode = new Node(production.first); // novi "parent" node
+                
+                for (int i = 0; i < production.second.size(); i++) { // broj elemenata u desnoj strani produkcije
+                    nodeStack.pop(); // makni stanje
+                    newNode->children.insert(newNode->children.begin(), nodeStack.top()); // makni symbol i stavi ga u novi node kao child
+                }
+                // nodeStack.emplace(newNode); 
+                auto newStateIt = table.novoStanje.find({nodeStack.top()->state, production.first}); // novo stanje
+                if (newStateIt == table.novoStanje.end()) {
+                    cerr << "Odbaci usred redukcije????" << '\n';
+                }
+                else if(newStateIt->second.first == "STAVI"){
+                    nodeStack.emplace(newNode); // stavi novi node na stog
+                }
+            } else if (action == "PRIHVATI") {
+                cerr << "PRIHVATI" << '\n';
+                return;
+            } else {
+                cerr << "Error: Unknown action " << action << '\n';
+                return;
+            }
+            
         }
-        return tokens;
+
     }
 
-    void handleError(int state, const Symbol& symbol, int line) {
-        cerr << "Error at line " << line << ": Unexpected symbol " << symbol << endl;
-        // Optional: Implement error recovery using SYNC_ZAVRSNI
+    void printFromRoot(Node* root, int depth = 0) {
+        if (!root) return;
+        std::cout << string(depth, ' ') << root->symbol << '\n';
+        for (auto child : root->children) {
+            printFromRoot(child, depth + 1);
+        }
     }
 };
 
-void printTree(GenTreeNode* node, int depth = 0) {
-    if (!node) return;
-    
-    string indent(depth * 2, ' ');
-    cout << indent << node->symbol;
-    if (!node->value.empty()) {
-        cout << "(" << node->line << "," << node->value << ")";
-    }
-    cout << endl;
-    
-    for (auto child : node->children) {
-        printTree(child, depth + 1);
-    }
-}
 
-// Test function
 int main() {
     ParsingTableStuff table("tablica.txt");
-    table.printLoaded(); // Print to verify correct loading
+    table.printLoaded();
 
-    GenTreeNode* tree = analyzer.parse("input.txt");
-    if (tree) {
-        printTree(tree);
-        delete tree;
-    } else {
-        std::cerr << "Parsing failed" << '\n';
-    }
+    std::cerr << "Parsing table constructed" << std::endl;
 
+    SyntaxAnalyzer analyzer(table);
+    analyzer.cinAndPrint();
+
+    
     return 0;
 }
