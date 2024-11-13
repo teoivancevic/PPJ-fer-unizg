@@ -412,6 +412,5 @@ int main() {
 
     analyzer.printFromRoot(root);
 
-    
     return 0;
 }
