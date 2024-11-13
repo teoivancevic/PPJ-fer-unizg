@@ -3,11 +3,6 @@
 #include "Utils.hpp"
 #include <fstream>
 
-//Dodo sam neka preimenovanja jer mi nisu bila konzistentna
-//States bi trebala biti stanja automata, a Symbols znakovi gramatike, drzimo se toga
-
-using std::endl;
-
 class Grammar
 {
     std::ifstream in;
@@ -18,20 +13,23 @@ private:
     vector<std::string> fileLines_backup;
 
 public:
-    int ID_global = 0;
     Symbol BEGIN_SYMBOL;
     set<Symbol> NEZAVRSNI;
     set<Symbol> ZAVRSNI;
     set<Symbol> SYNC_ZAVRSNI;
-    map<Symbol, vector<Word>> PRODUKCIJE;
     
+    map<Symbol, vector<Word>> PRODUKCIJE;
     map<pair<Symbol, Word>, int> ID_PRODUKCIJE;
+    int ID_global = 0;
+    
+    mutable map<pair<Symbol, Symbol>, bool> BEGINS_WITH; 
+    mutable map<Symbol, set<Symbol>> BEGINS_WITH_ALL; 
     
     bool isTerminating(const Symbol& sym) const {
         return (bool) ZAVRSNI.count(sym);
     }
 
-    Grammar(const std::string& inputStream/* = "cin"*/) //reference nemre imat default value
+    Grammar(const std::string& inputStream)
     {
         if(inputStream != "cin") 
             in = std::ifstream(inputStream);
@@ -114,31 +112,36 @@ public:
 
     bool startsWith (const Symbol& sym1, const Symbol& sym2) const 
     {
-        if (sym1 == sym2) return true;
-        if (!PRODUKCIJE.count(sym1)) return false;
+        pair<Symbol, Symbol> key = {sym1, sym2};
 
-        for (const Word& produkcija : PRODUKCIJE.at(sym1))
-            if (startsWith(produkcija, sym2)) 
-                return true;
-        
-        return false;
+        if (!exists(BEGINS_WITH, key)) 
+        {
+            BEGINS_WITH[key] = false;
+            
+            if (sym1 == sym2)
+                BEGINS_WITH[key] = true;
+            
+            else if (PRODUKCIJE.count(sym1))
+                for (const Word& produkcija : PRODUKCIJE.at(sym1))
+                    if (startsWith(produkcija, sym2)) 
+                        BEGINS_WITH[key] = true;
+        }
+
+        return BEGINS_WITH.at({sym1, sym2});
     }
 
     bool startsWith (const Word& word, const Symbol& sym2) const 
     {
         //usklađeno radi obrnutosti LR1Stavka.after_dot vectora
-        for (int i = (int) word.size() - 1; i>-1; i--)  //REVERSE
+        for (int i = (int) word.size() - 1; i > -1; i--)  //REVERSE
         {
             const Symbol& sym1 = word[i];
 
             if (startsWith(sym1, sym2)) {
-                if (sym2 == end_sym) continue;
-                else return true;
+                if (sym2 != end_sym) return true;
             }
-            if (!isVanishing(sym1)) {
-                if (sym2 == end_sym) return false;
-                else break;
-            }
+            else if (!isVanishing(sym1))
+                return false;
         }
 
         return sym2 == end_sym;
@@ -156,7 +159,7 @@ public:
         set<Symbol> rez;
 
         //isto usklađeno...
-        for (int i = (int) word.size() - 1; i>-1; i--)  //REVERSE
+        for (int i = (int) word.size() - 1; i > -1; i--)  //REVERSE
         {
             const Symbol& sym = word[i];
 
@@ -170,54 +173,20 @@ public:
 
     set<Symbol> startsWith (const Symbol& sym) const 
     {
-        if (!PRODUKCIJE.count(sym)) 
-            return ZAVRSNI.count(sym) ? set<Symbol>{sym} : set<Symbol>{};
-        
-        set<Symbol> rez;
+        if (!exists(BEGINS_WITH_ALL, sym)) 
+        {
+            BEGINS_WITH_ALL[sym] = {};
 
-        for (const Word& produkcija : PRODUKCIJE.at(sym))
-            rez = make_union(rez, startsWith(produkcija));
-        
-        return rez;
-    }
-
-    void dbgPrintFileLines () {
-        for(auto l: fileLines_backup){
-            cout << l <<endl;
-        }
-    }
-
-    void printInfo()
-    {
-        cout << "Nezavrsni: \t";
-        for (auto s: NEZAVRSNI){
-            cout << s << " ";
-        }
-
-        cout <<endl <<"Zavrsni: \t";
-        for (auto z: ZAVRSNI)
-            cout << z << " ";
-
-        cout <<endl <<"Sync Zavrsni: \t";
-        for (auto z: SYNC_ZAVRSNI)
-            cout << z << " ";
-
-        cout << endl <<"Produkcije: !" <<endl;
-        for (auto p: PRODUKCIJE){
-            cout << "  " << p.first << " ::= ";
-            for (auto pp: p.second) {
-                for (int i = (int) pp.size() -1; i > -1; i--) {  //REVERSE
-                    const Symbol& z = pp[i];
-                    if (z == eps)
-                        cout << "\"\" ";
-                    else
-                        cout << z << " ";
-                }
-                if(pp != p.second.back())
-                    cout << "| ";
+            if (!PRODUKCIJE.count(sym)) 
+                BEGINS_WITH_ALL[sym] = ZAVRSNI.count(sym) ? set<Symbol>{sym} : set<Symbol>{};
+            else {
+                set<Symbol> rez;
+                for (const Word& produkcija : PRODUKCIJE.at(sym))
+                    rez = make_union(rez, startsWith(produkcija));
             }
-            cout <<endl;
         }
+
+        return BEGINS_WITH_ALL.at(sym);
     }
 
     void dodajNoviPocetniZnak (const Symbol& newStartSym)
@@ -228,7 +197,6 @@ public:
     }
 };
 
-//PROVJERI:
 struct LR1Item 
 {
     Symbol left;               
@@ -284,18 +252,6 @@ struct LR1Item
     inline bool isComplete() {
         return symbolAfterDot() == end_sym;
     }
-
-    //maknuo sam one cursed simbole sry, ak treba možeš vratit ali preferirao bi da izgleda ovako jer:
-    //ako koristis stvari koje nisu u basic ASCII tablici postoji dobra sansa da se nece uvjek dobro ispisat
-    // std::string toString() const 
-    // { 
-    //     std::string result = left + " -> ";
-    //     for (const auto& s : before_dot) result += s + " ";
-    //     result += ". ";
-    //     for (const auto& s : after_dot) result += s + " ";
-    //     result += ", " + lookahead;
-    //     return result;
-    // }
 };
 
 template <>
