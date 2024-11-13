@@ -176,18 +176,20 @@ void teoMain_mockParsingTable()
     table.outputToFile("analizator/tablica.txt", grammar);
 }
 
-std::string input_file = "../test/09redred/test.san";
+// std::string input_file = "../test/09redred/test.san";
 
 int main ()
 {
     // korak 1 - parsiranje gramatike
     // input_file = "cin";
-    Grammar grammar(input_file);
+    // Grammar grammar(input_file);
+    Grammar grammar("cin");
+
     
     // korak 2 - dodajemo novi pocetni znak (zasto ovo nije u konstruktoru?)
     grammar.dodajNoviPocetniZnak(GRAMMAR_NEW_BEGIN_STATE);
     
-    DEBUG = true;
+    DEBUG = false;
     if (DEBUG) {
         grammar.dbgPrintFileLines();
         printf("\n");

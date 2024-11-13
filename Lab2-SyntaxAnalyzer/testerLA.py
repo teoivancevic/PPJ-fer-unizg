@@ -149,7 +149,7 @@ if TEST_INTRANET:
             print(f"{green}PASSED TEST{nocolor} {folder}")
         else:
             print(f"{red}FAIL TEST{nocolor} {folder}")
-            print(out.stdout)
+            # print(out.stdout)
 
             #break
         subprocess.run(["rm", "izlaz.txt"])
