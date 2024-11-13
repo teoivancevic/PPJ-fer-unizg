@@ -4,7 +4,6 @@
 #include "Automat.hpp"
 #include "Grammar.hpp"
 
-
 bool DEBUG = false;
 
 struct Action {
@@ -53,7 +52,7 @@ struct ParsingTable
                     akcija.emplace(key, Action{"PRIHVATI"});
                 }
                 //provjera vrijedi li pravilo a) --//--
-                else if (dka.exists_trans(current, sym)) 
+                else if (dka.exists_trans(current, sym) && !item.isComplete()) 
                 {
                     State nextState = dka.transitions.at(current).at(sym);
                     
@@ -76,7 +75,9 @@ struct ParsingTable
                     {
                         const auto key = pair{current, lookahead};
                         //razrjesavanje nejednoznacnosti
-                        if (!exists(akcija, key) || akcija.at(key).name != "POMAKNI" && akcija.at(key).id > id)
+                        if (exists(akcija, key) && akcija.at(key).name != "POMAKNI" && akcija.at(key).id > id)
+                            akcija[key] = Action{"REDUCIRAJ", id};
+                        else if (!exists(akcija, key))
                             akcija.emplace(key, Action{"REDUCIRAJ", id});
                     }
                 }     
@@ -96,20 +97,6 @@ struct ParsingTable
         for (const auto& [production, id] : grammar.ID_PRODUKCIJE) 
             out << id << " " <<production.first << " -> " << concatToString_r(production.second) << endl; //REVERSE
 
-//         out << "\nGRAMMAR_PRODUCTIONS:\n";
-//         for (int i=0; i < grammar.ID_global; i++) {
-//             auto [left, right] = grammar.ID_PRODUKCIJE_MAPA.at(i);
-//             out << i << " " << left << " -> ";
-//             for (const auto& s : right) {
-//                 if(s == right.back()) 
-//                     out << s;
-//                 else
-//                     out << s << " ";
-//             }
-//             out << "\n";
-//         }
-
-  
         out << "\nAKCIJA:" <<endl;
         for (const auto& [key, action] : akcija)
             out << key.first << " " << key.second << " " << action.toString() << endl;
@@ -189,19 +176,18 @@ void teoMain_mockParsingTable()
     table.outputToFile("analizator/tablica.txt", grammar);
 }
 
-
-
-// std::string input_file = "../test/lab2_teza/03gram100_1/test.san";
+std::string input_file = "../test/09redred/test.san";
 
 int main ()
 {
     // korak 1 - parsiranje gramatike
     // input_file = "cin";
-    Grammar grammar("cin");
+    Grammar grammar(input_file);
     
     // korak 2 - dodajemo novi pocetni znak (zasto ovo nije u konstruktoru?)
     grammar.dodajNoviPocetniZnak(GRAMMAR_NEW_BEGIN_STATE);
     
+    DEBUG = true;
     if (DEBUG) {
         grammar.dbgPrintFileLines();
         printf("\n");
@@ -220,41 +206,5 @@ int main ()
     // korak 6 - ispis tablice parsiranja
     table.outputToFile("analizator/tablica.txt", grammar);
     
-    return 0;
-}
-
-int oldMain () 
-{
-    // teoMain();
-    // teoMain_mockParsingTable();
-    cin.get();
-
-   
-    std::string file_path = "../test/lab2_teza/01aab_2/test.san";
-
-    Grammar grammar(file_path);
-    
-
-    // korak 2 - dodajemo novi pocetni znak (zasto ovo nije u konstruktoru?)
-
-    // grammar.dodajNoviPocetniZnak(GRAMMAR_NEW_BEGIN_STATE);
-  
-    if (DEBUG){
-        grammar.dbgPrintFileLines();
-        printf("\n");
-        grammar.printInfo();
-    }
-
-    eNKA enka(grammar);
-    DKA dka(enka);
-
-    std::string in = "b <B> a <S> b a b <A>";
-    // cin >>in;
-
-    forEachWord(in, [&dka, &enka](const Symbol& sym){
-        enka.update(sym);
-        dka.update(sym);
-    });
-
     return 0;
 }
