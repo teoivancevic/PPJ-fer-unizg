@@ -1,143 +1,22 @@
 SYNC_SYMBOLS:
-D_VIT_ZAGRADA
-TOCKAZAREZ
+a
 
 GRAMMAR_PRODUCTIONS:
-30 <aditivni_izraz> -> <multiplikativni_izraz>
-32 <aditivni_izraz> -> <aditivni_izraz> MINUS <multiplikativni_izraz>
-31 <aditivni_izraz> -> <aditivni_izraz> PLUS <multiplikativni_izraz>
-41 <bin_i_izraz> -> <jednakosni_izraz>
-42 <bin_i_izraz> -> <bin_i_izraz> AMPERSAND <jednakosni_izraz>
-45 <bin_ili_izraz> -> <bin_xili_izraz>
-46 <bin_ili_izraz> -> <bin_ili_izraz> OP_BIN_ILI <bin_xili_izraz>
-43 <bin_xili_izraz> -> <bin_i_izraz>
-44 <bin_xili_izraz> -> <bin_xili_izraz> OP_BIN_XILI <bin_i_izraz>
-25 <cast_izraz> -> L_ZAGRADA <ime_tipa> D_ZAGRADA <cast_izraz>
-24 <cast_izraz> -> <unarni_izraz>
-133 <definicija_funkcije> -> <deklarator> <slozena_naredba>
-131 <definicija_funkcije> -> <specifikatori_deklaracije> <deklarator> <slozena_naredba>
-132 <definicija_funkcije> -> <deklarator> <lista_deklaracija> <slozena_naredba>
-130 <definicija_funkcije> -> <specifikatori_deklaracije> <deklarator> <lista_deklaracija> <slozena_naredba>
-56 <deklaracija> -> <specifikatori_deklaracije> <lista_init_deklaratora> TOCKAZAREZ
-55 <deklaracija> -> <specifikatori_deklaracije> TOCKAZAREZ
-93 <deklaracija_parametra> -> <specifikatori_deklaracije> <deklarator>
-94 <deklaracija_parametra> -> <specifikatori_deklaracije>
-84 <deklarator> -> <izravni_deklarator>
-83 <deklarator> -> <pokazivac> <izravni_deklarator>
-95 <ime_tipa> -> <lista_specifikatora_kvalifikatora>
-96 <ime_tipa> -> <lista_specifikatora_kvalifikatora> <pokazivac>
-97 <inicijalizator> -> <izraz_pridruzivanja>
-98 <inicijalizator> -> L_VIT_ZAGRADA <lista_izraza_pridruzivanja> D_VIT_ZAGRADA
-99 <inicijalizator> -> L_VIT_ZAGRADA <lista_izraza_pridruzivanja> ZAREZ D_VIT_ZAGRADA
-63 <init_deklarator> -> <deklarator>
-64 <init_deklarator> -> <deklarator> OP_PRIDRUZI <inicijalizator>
-86 <izravni_deklarator> -> <izravni_deklarator> L_UGL_ZAGRADA <log_ili_izraz> D_UGL_ZAGRADA
-87 <izravni_deklarator> -> <izravni_deklarator> L_UGL_ZAGRADA D_UGL_ZAGRADA
-88 <izravni_deklarator> -> <izravni_deklarator> L_ZAGRADA <lista_parametara> D_ZAGRADA
-85 <izravni_deklarator> -> IDN
-53 <izraz> -> <izraz_pridruzivanja>
-54 <izraz> -> <izraz> ZAREZ <izraz_pridruzivanja>
-115 <izraz_naredba> -> TOCKAZAREZ
-116 <izraz_naredba> -> <izraz> TOCKAZAREZ
-52 <izraz_pridruzivanja> -> <unarni_izraz> OP_PRIDRUZI <izraz_pridruzivanja>
-51 <izraz_pridruzivanja> -> <log_ili_izraz>
-38 <jednakosni_izraz> -> <odnosni_izraz>
-39 <jednakosni_izraz> -> <jednakosni_izraz> OP_EQ <odnosni_izraz>
-40 <jednakosni_izraz> -> <jednakosni_izraz> OP_NEQ <odnosni_izraz>
-12 <lista_argumenata> -> <izraz_pridruzivanja>
-13 <lista_argumenata> -> <lista_argumenata> ZAREZ <izraz_pridruzivanja>
-111 <lista_deklaracija> -> <deklaracija>
-112 <lista_deklaracija> -> <lista_deklaracija> <deklaracija>
-61 <lista_init_deklaratora> -> <init_deklarator>
-62 <lista_init_deklaratora> -> <lista_init_deklaratora> ZAREZ <init_deklarator>
-100 <lista_izraza_pridruzivanja> -> <izraz_pridruzivanja>
-101 <lista_izraza_pridruzivanja> -> <lista_izraza_pridruzivanja> ZAREZ <izraz_pridruzivanja>
-113 <lista_naredbi> -> <naredba>
-114 <lista_naredbi> -> <lista_naredbi> <naredba>
-91 <lista_parametara> -> <deklaracija_parametra>
-92 <lista_parametara> -> <lista_parametara> ZAREZ <deklaracija_parametra>
-76 <lista_specifikatora_kvalifikatora> -> <specifikator_tipa> <lista_specifikatora_kvalifikatora>
-78 <lista_specifikatora_kvalifikatora> -> KR_CONST <lista_specifikatora_kvalifikatora>
-77 <lista_specifikatora_kvalifikatora> -> <specifikator_tipa>
-79 <lista_specifikatora_kvalifikatora> -> KR_CONST
-47 <log_i_izraz> -> <bin_ili_izraz>
-48 <log_i_izraz> -> <log_i_izraz> OP_I <bin_ili_izraz>
-49 <log_ili_izraz> -> <log_i_izraz>
-50 <log_ili_izraz> -> <log_ili_izraz> OP_ILI <log_i_izraz>
-26 <multiplikativni_izraz> -> <cast_izraz>
-27 <multiplikativni_izraz> -> <multiplikativni_izraz> ASTERISK <cast_izraz>
-28 <multiplikativni_izraz> -> <multiplikativni_izraz> OP_DIJELI <cast_izraz>
-29 <multiplikativni_izraz> -> <multiplikativni_izraz> OP_MOD <cast_izraz>
-103 <naredba> -> <izraz_naredba>
-104 <naredba> -> <naredba_grananja>
-105 <naredba> -> <naredba_petlje>
-106 <naredba> -> <naredba_skoka>
-102 <naredba> -> <slozena_naredba>
-117 <naredba_grananja> -> KR_IF L_ZAGRADA <izraz> D_ZAGRADA <naredba>
-118 <naredba_grananja> -> KR_IF L_ZAGRADA <izraz> D_ZAGRADA <naredba> KR_ELSE <naredba>
-121 <naredba_petlje> -> KR_FOR L_ZAGRADA <izraz_naredba> <izraz_naredba> <izraz> D_ZAGRADA <naredba>
-119 <naredba_petlje> -> KR_WHILE L_ZAGRADA <izraz> D_ZAGRADA <naredba>
-120 <naredba_petlje> -> KR_FOR L_ZAGRADA <izraz_naredba> <izraz_naredba> D_ZAGRADA <naredba>
-125 <naredba_skoka> -> KR_RETURN <izraz> TOCKAZAREZ
-123 <naredba_skoka> -> KR_BREAK TOCKAZAREZ
-122 <naredba_skoka> -> KR_CONTINUE TOCKAZAREZ
-124 <naredba_skoka> -> KR_RETURN TOCKAZAREZ
-33 <odnosni_izraz> -> <aditivni_izraz>
-35 <odnosni_izraz> -> <odnosni_izraz> OP_GT <aditivni_izraz>
-37 <odnosni_izraz> -> <odnosni_izraz> OP_GTE <aditivni_izraz>
-34 <odnosni_izraz> -> <odnosni_izraz> OP_LT <aditivni_izraz>
-36 <odnosni_izraz> -> <odnosni_izraz> OP_LTE <aditivni_izraz>
-89 <pokazivac> -> ASTERISK
-90 <pokazivac> -> ASTERISK KR_CONST
-5 <postfiks_izraz> -> <primarni_izraz>
-6 <postfiks_izraz> -> <postfiks_izraz> L_UGL_ZAGRADA <izraz> D_UGL_ZAGRADA
-8 <postfiks_izraz> -> <postfiks_izraz> L_ZAGRADA <lista_argumenata> D_ZAGRADA
-7 <postfiks_izraz> -> <postfiks_izraz> L_ZAGRADA D_ZAGRADA
-9 <postfiks_izraz> -> <postfiks_izraz> TOCKA IDN
-11 <postfiks_izraz> -> <postfiks_izraz> OP_DEC
-10 <postfiks_izraz> -> <postfiks_izraz> OP_INC
-126 <prijevodna_jedinica> -> <vanjska_deklaracija>
-127 <prijevodna_jedinica> -> <prijevodna_jedinica> <vanjska_deklaracija>
-1 <primarni_izraz> -> BROJ
-4 <primarni_izraz> -> L_ZAGRADA <izraz> D_ZAGRADA
-0 <primarni_izraz> -> IDN
-3 <primarni_izraz> -> NIZ_ZNAKOVA
-2 <primarni_izraz> -> ZNAK
-109 <slozena_naredba> -> L_VIT_ZAGRADA <lista_deklaracija> D_VIT_ZAGRADA
-110 <slozena_naredba> -> L_VIT_ZAGRADA <lista_deklaracija> <lista_naredbi> D_VIT_ZAGRADA
-108 <slozena_naredba> -> L_VIT_ZAGRADA <lista_naredbi> D_VIT_ZAGRADA
-107 <slozena_naredba> -> L_VIT_ZAGRADA D_VIT_ZAGRADA
-69 <specifikator_tipa> -> <struct_specifikator>
-66 <specifikator_tipa> -> KR_CHAR
-68 <specifikator_tipa> -> KR_FLOAT
-67 <specifikator_tipa> -> KR_INT
-65 <specifikator_tipa> -> KR_VOID
-57 <specifikatori_deklaracije> -> <specifikator_tipa>
-58 <specifikatori_deklaracije> -> <specifikator_tipa> <specifikatori_deklaracije>
-60 <specifikatori_deklaracije> -> KR_CONST <specifikatori_deklaracije>
-59 <specifikatori_deklaracije> -> KR_CONST
-75 <struct_deklaracija> -> <lista_specifikatora_kvalifikatora> <struct_lista_deklaratora> TOCKAZAREZ
-82 <struct_deklarator> -> <deklarator>
-73 <struct_lista_deklaracija> -> <struct_deklaracija>
-74 <struct_lista_deklaracija> -> <struct_lista_deklaracija> <struct_deklaracija>
-80 <struct_lista_deklaratora> -> <struct_deklarator>
-81 <struct_lista_deklaratora> -> <struct_lista_deklaratora> ZAREZ <struct_deklarator>
-70 <struct_specifikator> -> KR_STRUCT IDN L_VIT_ZAGRADA <struct_lista_deklaracija> D_VIT_ZAGRADA
-71 <struct_specifikator> -> KR_STRUCT L_VIT_ZAGRADA <struct_lista_deklaracija> D_VIT_ZAGRADA
-72 <struct_specifikator> -> KR_STRUCT IDN
-17 <unarni_izraz> -> <unarni_operator> <cast_izraz>
-14 <unarni_izraz> -> <postfiks_izraz>
-16 <unarni_izraz> -> OP_DEC <unarni_izraz>
-15 <unarni_izraz> -> OP_INC <unarni_izraz>
-18 <unarni_operator> -> AMPERSAND
-19 <unarni_operator> -> ASTERISK
-21 <unarni_operator> -> MINUS
-23 <unarni_operator> -> OP_NEG
-22 <unarni_operator> -> OP_TILDA
-20 <unarni_operator> -> PLUS
-128 <vanjska_deklaracija> -> <definicija_funkcije>
-129 <vanjska_deklaracija> -> <deklaracija>
+3 <A> -> a a b
+2 <B> -> a a b
+1 <S> -> <A>
+0 <S> -> <B>
 
 AKCIJA:
+0 a POMAKNI 4
+1 $ REDUCIRAJ 1
+2 $ REDUCIRAJ 0
+3 $ PRIHVATI 0
+4 a POMAKNI 5
+5 b POMAKNI 6
+6 $ REDUCIRAJ 2
 
 NOVO STANJE:
+0 <A> STAVI 1
+0 <B> STAVI 2
+0 <S> STAVI 3
