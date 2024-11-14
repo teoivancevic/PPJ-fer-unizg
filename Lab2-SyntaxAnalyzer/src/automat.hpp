@@ -49,7 +49,7 @@ public:
             while (!item.isComplete())
             {
                 //dohvati sljedeći znak iza točke
-                const Symbol& nextSym = item.symbolAfterDot();
+                const Symbol nextSym = item.symbolAfterDot();
                 symbols.emplace(nextSym);
 
                 //beta je niz znakova iza sljedeceg simbola kao u skripti str 148
