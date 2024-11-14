@@ -57,7 +57,7 @@ struct ParsingTable
                     State nextState = dka.transitions.at(current).at(sym);
                     
                     if (grammar.isTerminating(sym))
-                        akcija.emplace(key, Action{"POMAKNI", nextState});
+                        akcija[key] = Action{"POMAKNI", nextState};
                     else 
                         novoStanje.emplace(key, Action{"STAVI", nextState});
                 }
@@ -112,9 +112,22 @@ struct ParsingTable
 
 std::string input = "cin";
 
+// a 
+// (0, a) => Pomakni(2)
+// (1, stackend) => Prihvati
+// (1, b) => Pomakni(3)
+// (2, stackend) => Reduciraj: 0
+// (2, b) => Pomakni(4)
+// (3, stackend) => Reduciraj: 2
+// (3, b) => Reduciraj: 2
+// (4, stackend) => Reduciraj: 1
+// (4, b) => Reduciraj: 1
+
+// (0, <S>) => Stavi(1)
+
 int main ()
 {
-    input = "../test/12ppjC/test.san";
+    input = "../test/08pomred/test.san";
 
     // korak 1 - parsiranje gramatike
     Grammar grammar(input);
