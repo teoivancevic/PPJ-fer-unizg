@@ -127,7 +127,7 @@ std::string input = "cin";
 
 int main ()
 {
-    input = "../test/08pomred/test.san";
+    // input = "../test/08pomred/test.san";
 
     // korak 1 - parsiranje gramatike
     Grammar grammar(input);
