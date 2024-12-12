@@ -86,7 +86,7 @@ public:
 
     //poc stanje
     inline set<State>& start() const {
-        return transitions[q0][eps];
+        return transitions.at(q0).at(eps);
     }
 
     //eps okolina
