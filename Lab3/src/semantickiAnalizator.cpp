@@ -6,6 +6,106 @@
 
 using namespace std;
 
+
+#pragma region Types
+
+// First, define the basic types
+enum class BasicType {
+    INT,
+    CHAR,
+    VOID,
+};
+
+class TypeInfo;
+
+namespace TypeUtils {
+    bool isNumericType(const TypeInfo& type);
+    bool isFunctionType(const TypeInfo& type);
+    bool isArrayType(const TypeInfo& type);
+    bool areTypesCompatible(const TypeInfo& source, const TypeInfo& target);
+    string typeToString(const BasicType& type);
+}
+
+// A class to represent the complete type system
+class TypeInfo {
+private:
+    BasicType baseType;
+    bool isConst_;
+    bool isArray_;
+    vector<TypeInfo> functionParams;  // For function types
+    BasicType returnType;            // For function types
+
+    // Friend declaration for TypeUtils functions individually
+    friend bool TypeUtils::isNumericType(const TypeInfo&);
+    friend bool TypeUtils::isFunctionType(const TypeInfo&);
+    friend bool TypeUtils::isArrayType(const TypeInfo&);
+    friend bool TypeUtils::areTypesCompatible(const TypeInfo&, const TypeInfo&);
+
+public:
+    // Constructor for simple types
+    TypeInfo(BasicType type, bool constQualified = false)
+        : baseType(type), isConst_(constQualified), isArray_(false), returnType(type) {}
+    
+    // Constructor for array types
+    TypeInfo(BasicType type, bool constQualified, bool array)
+        : baseType(type), isConst_(constQualified), isArray_(array), returnType(type) {}
+
+    // Constructor for function types
+    TypeInfo(BasicType returnType, vector<TypeInfo> params)
+        : returnType(returnType), functionParams(params), isArray_(false), 
+          baseType(BasicType::VOID), isConst_(false) {}
+
+    // Static factory methods
+    static TypeInfo makeArrayType(BasicType type, bool constQualified) {
+        return TypeInfo(type, constQualified, true);
+    }
+
+    static TypeInfo makeFunctionType(BasicType returnType, vector<TypeInfo> params) {
+        return TypeInfo(returnType, params);
+    }
+
+    // Method to check implicit type conversion (⇠ relation)
+    bool canImplicitlyConvertTo(const TypeInfo& target) const {
+        return TypeUtils::areTypesCompatible(*this, target);
+    }
+
+    // Getters
+    BasicType getBaseType() const { return baseType; }
+    BasicType getReturnType() const { return returnType; }
+    bool isConst() const { return isConst_; }
+    bool isArray() const { return isArray_; }
+    const vector<TypeInfo>& getFunctionParams() const { return functionParams; }
+    bool isVoidParam() const { return functionParams.empty(); }
+    bool isVoid() const { return baseType == BasicType::VOID; }
+
+    // String conversion for debugging
+    string toString() const {
+        string result = TypeUtils::typeToString(baseType);
+        if (isConst()) result = "const(" + result + ")";
+        if (isArray()) result = "niz(" + result + ")";
+        if (TypeUtils::isFunctionType(*this)) {
+            result = "funkcija(" + TypeUtils::typeToString(returnType) + ")";
+        }
+        return result;
+    }
+
+    // Add equality operator
+    bool operator==(const TypeInfo& other) const {
+        return baseType == other.baseType && 
+               isConst() == other.isConst() && 
+               isArray() == other.isArray() &&
+               functionParams == other.functionParams &&
+               returnType == other.returnType;
+    }
+
+    bool operator!=(const TypeInfo& other) const {
+        return !(*this == other);
+    }
+};
+
+#pragma region Utils
+// Forward declare TypeInfo
+
 // Tree node structure
 struct Node {
     string symbol;         // Node symbol (A, B, etc.)
@@ -14,6 +114,7 @@ struct Node {
 
     // New semantic-related members
     string type;          // For tracking types (int, char, void, etc.)
+    TypeInfo typeInfo;
     bool isLValue;            // For l-value checking
     
     int lineNumber;           // For error reporting
@@ -23,7 +124,8 @@ struct Node {
     int arraySize;            // For array declarations
     vector<string> paramTypes;  // For function parameters
 
-    Node(string s) : symbol(s) {}
+    Node(string s) : symbol(s), typeInfo(BasicType::VOID) {}  // Initialize typeInfo
+    
     ~Node() {
         for (Node* child : children) {
             delete child;
@@ -31,6 +133,93 @@ struct Node {
     }
 };
 
+namespace TypeUtils {
+    string typeToString(const BasicType& type) {
+        switch(type) {
+            case BasicType::INT: return "int";
+            case BasicType::CHAR: return "char";
+            case BasicType::VOID: return "void";
+            default: return "unknown";
+        }
+    }
+
+    bool isNumericType(const TypeInfo& type) {
+        return type.getBaseType() == BasicType::INT || 
+               type.getBaseType() == BasicType::CHAR;
+    }
+
+    bool isFunctionType(const TypeInfo& type) {
+        return type.getFunctionParams().size() > 0 || 
+               (type.getFunctionParams().size() == 0 && type.isVoidParam());
+    }
+
+    bool isArrayType(const TypeInfo& type) {
+        return type.isArray();
+    }
+
+    bool areTypesCompatible(const TypeInfo& source, const TypeInfo& target) {
+        
+        
+        // Same type is always compatible
+        if (source == target) return true;
+
+        // Handle void type
+        if (source.isVoid() || target.isVoid()) {
+            return false;  // void only compatible with itself
+        }
+
+        // Handle const relationships (const(T) ⇠ T and T ⇠ const(T))
+        if (source.getBaseType() == target.getBaseType()) {
+            if (!source.isConst() || target.isConst()) {
+                return true;
+            }
+        }
+
+        // Handle char ⇠ int conversion
+        if (source.getBaseType() == BasicType::CHAR && 
+            target.getBaseType() == BasicType::INT) {
+            return true;
+        }
+
+        // Handle array type conversions
+        if (isArrayType(source) && isArrayType(target)) {
+            // niz(T) ⇠ niz(const(T))
+            if (!source.isConst() && target.isConst() && 
+                source.getBaseType() == target.getBaseType()) {
+                return true;
+            }
+        }
+
+        // Handle function type compatibility
+        if (isFunctionType(source) && isFunctionType(target)) {
+            // Check return type
+            if (!areTypesCompatible(
+                TypeInfo(source.getReturnType()), 
+                TypeInfo(target.getReturnType()))) {
+                return false;
+            }
+
+            // Check parameters
+            const auto& sourceParams = source.getFunctionParams();
+            const auto& targetParams = target.getFunctionParams();
+            
+            if (sourceParams.size() != targetParams.size()) {
+                return false;
+            }
+
+            for (size_t i = 0; i < sourceParams.size(); i++) {
+                if (!areTypesCompatible(sourceParams[i], targetParams[i])) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // Everything else is incompatible
+        return false;
+   
+    }
+}
 struct SymbolTableEntry {
     string name;
     string type;         // Basic type or function signature, // "int", "char", "void", or function type
@@ -118,6 +307,202 @@ void reportError(Node* node) {
 }
 
 
+
+
+// Function to read indentation level
+int getIndentationLevel(const string& line) {
+    int spaces = 0;
+    while (spaces < line.length() && line[spaces] == ' ') {
+        spaces++;
+    }
+    return spaces;
+}
+
+// Function to parse node name from line (extracts content between < >)
+string parseNodeName(const string& line) {
+    if (line[0] == '<') {
+        size_t end = line.find('>');
+        if (end != string::npos) {
+            return line.substr(0, end + 1);  // Keep the < and >
+        }
+    }
+    return "";
+}
+
+// Function to parse content (everything that's not a node declaration)
+string parseContent(const string& line) {
+    if (line[0] != '<') {
+        return line;
+    }
+    return "";
+}
+
+// Recursive function to build the tree
+Node* buildTree() {
+    string line;
+    if (!getline(cin, line)) {
+        return nullptr;
+    }
+    
+    // Trim leading spaces while keeping count
+    int currentIndentation = getIndentationLevel(line);
+    line = line.substr(currentIndentation);
+    
+    // Check for empty line or end marker
+    if (line.empty() || line[0] == '$') {
+        return nullptr;
+    }
+
+    // Create node based on line content
+    Node* currentNode;
+    if (line[0] == '<') {
+        // This is a symbol node (like <S>, <A>, <B>)
+        string symbol = parseNodeName(line);
+        currentNode = new Node(symbol);
+    } else {
+        // This is a content node (like "NIZ_ZNAKOVA 2 "\a\b\c"")
+        currentNode = new Node("");
+        currentNode->content = line;
+        
+        // Parse and set lexical unit if this is a terminal
+        istringstream iss(line);
+        string token, line_num, lexeme;
+        iss >> token;  // Get token type (NIZ_ZNAKOVA, etc)
+        iss >> line_num;  // Get line number
+        
+        // Get the rest of the line as lexeme (to handle strings with spaces)
+        getline(iss >> ws, lexeme);
+        currentNode->lexicalUnit = lexeme;
+    }
+
+    // Read next line to peek at indentation
+    string nextLine;
+    while (getline(cin, line)) {
+        int nextIndentation = getIndentationLevel(line);
+        
+        // If next line has less or equal indentation, we're done with this node
+        if (nextIndentation <= currentIndentation) {
+            cin.seekg(-line.length() - 1, ios::cur); // Push back the line
+            break;
+        }
+        
+        // Process child node
+        cin.seekg(-line.length() - 1, ios::cur); // Push back the line
+        Node* child = buildTree();
+        if (child != nullptr) {
+            currentNode->children.push_back(child);
+        }
+    }
+
+    return currentNode;
+}
+
+// Function to print the tree (for verification)
+void printTree(Node* root, int level = 0) {
+    if (root == nullptr) return;
+
+    string indent(level, ' ');
+    
+    if (!root->content.empty()) {
+        cout << indent << root->content << endl;
+    } else {
+        cout << indent << "<" << root->symbol << ">" << endl;
+    }
+
+    for (Node* child : root->children) {
+        printTree(child, level + 1);
+    }
+}
+
+#pragma endregion Utils
+
+
+
+
+
+
+namespace Constants {
+    const int INT_MIN = -2147483648;
+    const int INT_MAX = 2147483647;
+    const int CHAR_MIN = 0;
+    const int CHAR_MAX = 255;
+
+    bool isValidIntConstant(int value) {
+        return value >= INT_MIN && value <= INT_MAX;
+    }
+
+    bool isValidCharConstant(int value) {
+        return value >= CHAR_MIN && value <= CHAR_MAX;
+    }
+
+    bool isValidEscapeSequence(char c) {
+        return c == 't' || c == 'n' || c == '0' || 
+               c == '\'' || c == '\"' || c == '\\';
+    }
+}
+
+class ExpressionValidator {
+public:
+    static bool validateBrojConstant(const string& lexeme, TypeInfo& outType) {
+        try {
+            int value = stoi(lexeme);
+            if (!Constants::isValidIntConstant(value)) {
+                return false;
+            }
+            outType = TypeInfo(BasicType::INT);
+            return true;
+        } catch (...) {
+            return false;
+        }
+    }
+
+    static bool validateZnakConstant(const string& lexeme, TypeInfo& outType) {
+        string charValue = lexeme.substr(1, lexeme.length() - 2);  // Remove quotes
+        
+        if (charValue.length() == 1) {
+            if (!Constants::isValidCharConstant(static_cast<int>(charValue[0]))) {
+                return false;
+            }
+        }
+        else if (charValue.length() == 2 && charValue[0] == '\\') {
+            if (!Constants::isValidEscapeSequence(charValue[1])) {
+                return false;
+            }
+        }
+        else {
+            return false;
+        }
+        
+        outType = TypeInfo(BasicType::CHAR);
+        return true;
+    }
+
+    static bool validateNizZnakova(const string& lexeme, TypeInfo& outType) {
+        for (size_t i = 0; i < lexeme.length(); i++) {
+            if (lexeme[i] == '\\') {
+                if (i + 1 >= lexeme.length()) {
+                    return false;
+                }
+                if (!Constants::isValidEscapeSequence(lexeme[i + 1])) {
+                    return false;
+                }
+                i++;
+            }
+            else if (!Constants::isValidCharConstant(static_cast<int>(lexeme[i]))) {
+                return false;
+            }
+        }
+        
+        outType = TypeInfo::makeArrayType(BasicType::CHAR, true);
+        return true;
+    }
+};
+
+#pragma endregion Types
+
+
+
+
 #pragma region Processors
 // Za obradu izraza (4.4.4)
 class IzrazProcessor {
@@ -150,17 +535,17 @@ private:
 
 // Implementation of the public function
 void IzrazProcessor::process_primarni_izraz(Node* node) {
-    if (node->children.size() != 1 && node->children.size() != 3) {  // Changed to allow 3 children
+    if (node->children.size() != 1 && node->children.size() != 3) {
         reportError(node);
         return;
     }
+
     if (node->children.size() == 3) {
-        // Handle L_ZAGRADA <izraz> D_ZAGRADA case
         if (node->children[0]->content.find("L_ZAGRADA") == 0 &&
             node->children[2]->content.find("D_ZAGRADA") == 0) {
-            process_izraz(node->children[1]);  // Process the expression first
-            node->type = node->children[1]->type;  // Inherit type from expression
-            node->isLValue = node->children[1]->isLValue;  // Inherit l-value from expression
+            process_izraz(node->children[1]);
+            node->typeInfo = node->children[1]->typeInfo;
+            node->isLValue = node->children[1]->isLValue;
             return;
         }
         reportError(node);
@@ -169,79 +554,41 @@ void IzrazProcessor::process_primarni_izraz(Node* node) {
 
     Node* child = node->children[0];
     string childContent = child->content;
+    node->isLValue = false;
 
     if (childContent.find("IDN") == 0) {
-        // Handle IDN case
         SymbolTableEntry* entry = currentScope->lookup(child->lexicalUnit);
         if (!entry) {
             reportError(node);
             return;
         }
-        node->type = entry->type;
+        
+        if (entry->type == "int") {
+            node->typeInfo = TypeInfo(BasicType::INT, entry->isConstant);
+        } else if (entry->type == "char") {
+            node->typeInfo = TypeInfo(BasicType::CHAR, entry->isConstant);
+        } else if (entry->type == "void") {
+            node->typeInfo = TypeInfo(BasicType::VOID, entry->isConstant);
+        }
+        
         node->isLValue = !entry->isConstant && !entry->isFunction && 
                         entry->arraySize == -1 && 
                         (entry->type == "int" || entry->type == "char");
     }
     else if (childContent.find("BROJ") == 0) {
-        // Handle BROJ case
-        try {
-            int value = stoi(child->lexicalUnit);
-            if (value < -2147483648 || value > 2147483647) {
-                reportError(node);
-                return;
-            }
-            node->type = "int";
-            node->isLValue = false;
-        } catch (...) {
+        if (!ExpressionValidator::validateBrojConstant(child->lexicalUnit, node->typeInfo)) {
             reportError(node);
         }
     }
     else if (childContent.find("ZNAK") == 0) {
-        // Handle ZNAK case
-        string charValue = child->lexicalUnit;
-        charValue = charValue.substr(1, charValue.length() - 2);
-        
-        if (charValue.length() == 1) {
-            node->type = "char";
-        }
-        else if (charValue.length() == 2 && charValue[0] == '\\') {
-            char escaped = charValue[1];
-            if (escaped != 't' && escaped != 'n' && escaped != '0' && 
-                escaped != '\'' && escaped != '\"' && escaped != '\\') {
-                reportError(node);
-                return;
-            }
-            node->type = "char";
-        }
-        else {
+        if (!ExpressionValidator::validateZnakConstant(child->lexicalUnit, node->typeInfo)) {
             reportError(node);
-            return;
         }
-        node->isLValue = false;
     }
     else if (childContent.find("NIZ_ZNAKOVA") == 0) {
-        // Handle NIZ_ZNAKOVA case
-        string strValue = child->lexicalUnit;
-        strValue = strValue.substr(1, strValue.length() - 2);
-        
-        for (size_t i = 0; i < strValue.length(); i++) {
-            if (strValue[i] == '\\') {
-                if (i + 1 >= strValue.length()) {
-                    reportError(node);
-                    return;
-                }
-                char escaped = strValue[i + 1];
-                if (escaped != 't' && escaped != 'n' && escaped != '0' && 
-                    escaped != '\'' && escaped != '\"' && escaped != '\\') {
-                    reportError(node);
-                    return;
-                }
-                i++;
-            }
+        if (!ExpressionValidator::validateNizZnakova(child->lexicalUnit, node->typeInfo)) {
+            reportError(node);
         }
-        
-        node->type = "niz(const(char))";
-        node->isLValue = false;
     }
     else {
         reportError(node);
@@ -457,102 +804,6 @@ public:
 #pragma endregion Claude_definitions
 
 
-
-
-// Function to read indentation level
-int getIndentationLevel(const string& line) {
-    int spaces = 0;
-    while (spaces < line.length() && line[spaces] == ' ') {
-        spaces++;
-    }
-    return spaces;
-}
-
-// Function to parse node name from line (extracts content between < >)
-string parseNodeName(const string& line) {
-    if (line[0] == '<') {
-        size_t end = line.find('>');
-        if (end != string::npos) {
-            return line.substr(0, end + 1);  // Keep the < and >
-        }
-    }
-    return "";
-}
-
-// Function to parse content (everything that's not a node declaration)
-string parseContent(const string& line) {
-    if (line[0] != '<') {
-        return line;
-    }
-    return "";
-}
-
-// Recursive function to build the tree
-Node* buildTree() {
-    string line;
-    if (!getline(cin, line)) {
-        return nullptr;
-    }
-    
-    // Trim leading spaces while keeping count
-    int currentIndentation = getIndentationLevel(line);
-    line = line.substr(currentIndentation);
-    
-    // Check for empty line or end marker
-    if (line.empty() || line[0] == '$') {
-        return nullptr;
-    }
-
-    // Create node based on line content
-    Node* currentNode;
-    if (line[0] == '<') {
-        // This is a symbol node (like <S>, <A>, <B>)
-        string symbol = parseNodeName(line);
-        currentNode = new Node(symbol);
-    } else {
-        // This is a content node (like "b 1 b")
-        currentNode = new Node("");
-        currentNode->content = line;
-    }
-
-    // Read next line to peek at indentation
-    string nextLine;
-    while (getline(cin, line)) {
-        int nextIndentation = getIndentationLevel(line);
-        
-        // If next line has less or equal indentation, we're done with this node
-        if (nextIndentation <= currentIndentation) {
-            cin.seekg(-line.length() - 1, ios::cur); // Push back the line
-            break;
-        }
-        
-        // Process child node
-        cin.seekg(-line.length() - 1, ios::cur); // Push back the line
-        Node* child = buildTree();
-        if (child != nullptr) {
-            currentNode->children.push_back(child);
-        }
-    }
-
-    return currentNode;
-}
-
-// Function to print the tree (for verification)
-void printTree(Node* root, int level = 0) {
-    if (root == nullptr) return;
-
-    string indent(level, ' ');
-    
-    if (!root->content.empty()) {
-        cout << indent << root->content << endl;
-    } else {
-        cout << indent << "<" << root->symbol << ">" << endl;
-    }
-
-    for (Node* child : root->children) {
-        printTree(child, level + 1);
-    }
-}
 
 int main() {
     Node* root = buildTree();

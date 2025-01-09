@@ -32,7 +32,7 @@ if TEST_INTRANET:
     print("----------------------------------------")
 
     defaultTestFileName = "test"
-    srcFolder = "lab2-submission"
+    srcFolder = "lab2-SPRUT"
 
 
     for folder in folders:
