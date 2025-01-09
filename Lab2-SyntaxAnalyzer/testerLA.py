@@ -103,7 +103,12 @@ if TEST_INTRANET:
     print("--------------------")
 
     defaultTestFileName = "test"
+<<<<<<< HEAD
     # it = defaultTestFileName
+=======
+    srcFolder = "lab2-SPRUT"
+
+>>>>>>> 05e144514fd80b39a30c02f9346977e6334d1bda
 
     for folder in folders:
         lang = defaultTestFileName + ".san"
