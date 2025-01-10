@@ -73,12 +73,11 @@ _Note: imma be real nemam pojma sto je lista argumenata u ovom kontekstu_
 <lista_izraza_pridruzivanja> ::= <izraz_pridruzivanja>
 	| <lista_izraza_pridruzivanja> ZAREZ <izraz_pridruzivanja>
 ```
-5. ### izraz (aka niz algebarskih izraza)
+5. ### izraz _(aka niz algebarskih izraza)_
 ```
 <izraz> ::= <izraz_pridruzivanja>
 	| <izraz> ZAREZ <izraz_pridruzivanja>
 ```
-
 ## NAREDBENA STRUKTURA
 
 1. ### blok naredbi
@@ -110,10 +109,9 @@ _Note: imma be real nemam pojma sto je lista argumenata u ovom kontekstu_
 	| KR_RETURN TOCKAZAREZ
 	| KR_RETURN <izraz> TOCKAZAREZ
 ```
-
 ## DEFINICIJE I DEKLARACIJE FUNKCIJA I VARIJABLI
 
-1. ### prijevodna jedinica (aka niz definicija i deklaracija)
+1. ### prijevodna jedinica _(aka niz definicija i deklaracija)_
 ```
 <prijevodna_jedinica> ::= <vanjska_deklaracija>
 	| <prijevodna_jedinica> <vanjska_deklaracija>
@@ -129,13 +127,13 @@ _Note: imma be real nemam pojma sto je lista argumenata u ovom kontekstu_
 <deklaracija_parametra> ::= <ime_tipa> IDN
 	| <ime_tipa> IDN L_UGL_ZAGRADA D_UGL_ZAGRADA
 ```
-3. ### deklaracije
+3. ### deklaracije (varijabli i funkcija)
 ```
 <lista_deklaracija> ::= <deklaracija>
 	| <lista_deklaracija> <deklaracija>
 <deklaracija> ::= <ime_tipa> <lista_init_deklaratora> TOCKAZAREZ
 ```
-4. ### inicijalizatori
+4. ### deklaratori _(aka potpisi funkcija i imena varijabla)_
 ```
 <lista_init_deklaratora> ::= <init_deklarator>
 	| <lista_init_deklaratora> ZAREZ <init_deklarator>
@@ -145,6 +143,10 @@ _Note: imma be real nemam pojma sto je lista argumenata u ovom kontekstu_
 	| IDN L_UGL_ZAGRADA BROJ D_UGL_ZAGRADA
 	| IDN L_ZAGRADA KR_VOID D_ZAGRADA
 	| IDN L_ZAGRADA <lista_parametara> D_ZAGRADA
+```
+5. ### inicijalizator _(aka pocetna vrijednost)_
+```
 <inicijalizator> ::= <izraz_pridruzivanja>
 	| L_VIT_ZAGRADA <lista_izraza_pridruzivanja> D_VIT_ZAGRADA
 ```
+_Note: izraz pridruzivanja sinonim je za algebarski izraz i ovdje se misli samo na izraze koji ne ukljucuju pridruzivanje, cudna nomenklazura_
