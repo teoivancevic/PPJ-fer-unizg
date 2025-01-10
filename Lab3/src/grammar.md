@@ -1,11 +1,17 @@
-##IZRAZI
+## IZRAZI
 
+1. ### primarni izraz
 ```
 <primarni_izraz> ::= IDN
 	| BROJ
 	| ZNAK
 	| NIZ_ZNAKOVA
 	| L_ZAGRADA <izraz> D_ZAGRADA
+```
+_Note: izraz je definiran na kraju_
+
+2. ### postfiks izraz + lista argumenata
+```
 <postfiks_izraz> ::= <primarni_izraz>
 	| <postfiks_izraz> L_UGL_ZAGRADA <izraz> D_UGL_ZAGRADA
 	| <postfiks_izraz> L_ZAGRADA D_ZAGRADA
@@ -14,6 +20,19 @@
 	| <postfiks_izraz> OP_DEC
 <lista_argumenata> ::= <izraz_pridruzivanja>
 	| <lista_argumenata> ZAREZ <izraz_pridruzivanja>
+```
+_Note: imma be real nemam pojma sto je lista argumenata u ovom kontekstu_
+
+3. ### ime tipa
+```
+<ime_tipa> ::= <specifikator_tipa>
+	| KR_CONST <specifikator_tipa>
+<specifikator_tipa> ::= KR_VOID
+	| KR_CHAR
+	| KR_INT
+```
+4. ### algebarski izrazi _(od najveceg prema najmanjem prioritetu)_
+```
 <unarni_izraz> ::= <postfiks_izraz>
 	| OP_INC <unarni_izraz>
 	| OP_DEC <unarni_izraz>
@@ -24,11 +43,6 @@
 	| OP_NEG
 <cast_izraz> ::= <unarni_izraz>
 	| L_ZAGRADA <ime_tipa> D_ZAGRADA <cast_izraz>
-<ime_tipa> ::= <specifikator_tipa>
-	| KR_CONST <specifikator_tipa>
-<specifikator_tipa> ::= KR_VOID
-	| KR_CHAR
-	| KR_INT
 <multiplikativni_izraz> ::= <cast_izraz>
 	| <multiplikativni_izraz> OP_PUTA <cast_izraz>
 	| <multiplikativni_izraz> OP_DIJELI <cast_izraz>
@@ -56,17 +70,29 @@
 	| <log_ili_izraz> OP_ILI <log_i_izraz>
 <izraz_pridruzivanja> ::= <log_ili_izraz>
 	| <postfiks_izraz> OP_PRIDRUZI <izraz_pridruzivanja>
+<lista_izraza_pridruzivanja> ::= <izraz_pridruzivanja>
+	| <lista_izraza_pridruzivanja> ZAREZ <izraz_pridruzivanja>
+```
+5. ### izraz (aka niz algebarskih izraza)
+```
 <izraz> ::= <izraz_pridruzivanja>
 	| <izraz> ZAREZ <izraz_pridruzivanja>
 ```
 
-##NAREDBENA STRUKTURA
+## NAREDBENA STRUKTURA
 
+1. ### blok naredbi
 ```
 <slozena_naredba> ::= L_VIT_ZAGRADA <lista_naredbi> D_VIT_ZAGRADA
 	| L_VIT_ZAGRADA <lista_deklaracija> <lista_naredbi> D_VIT_ZAGRADA
+```
+2. ### lista (niz) naredbi
+```
 <lista_naredbi> ::= <naredba>
 	| <lista_naredbi> <naredba>
+```
+3. ### naredba + vrste naredbi
+```
 <naredba> ::= <slozena_naredba>
 	| <izraz_naredba>
 	| <naredba_grananja>
@@ -85,22 +111,32 @@
 	| KR_RETURN <izraz> TOCKAZAREZ
 ```
 
-##DEFINICIJE I DEKLARACIJE FUNKCIJA I VARIJABLI
+## DEFINICIJE I DEKLARACIJE FUNKCIJA I VARIJABLI
 
+1. ### prijevodna jedinica (aka niz definicija i deklaracija)
 ```
 <prijevodna_jedinica> ::= <vanjska_deklaracija>
 	| <prijevodna_jedinica> <vanjska_deklaracija>
 <vanjska_deklaracija> ::= <definicija_funkcije>
 	| <deklaracija>
+```
+2. ### definicija funkcije + lista parametara
+```
 <definicija_funkcije> ::= <ime_tipa> IDN L_ZAGRADA KR_VOID D_ZAGRADA <slozena_naredba>
 	| <ime_tipa> IDN L_ZAGRADA <lista_parametara> D_ZAGRADA <slozena_naredba>
 <lista_parametara> ::= <deklaracija_parametra>
 	| <lista_parametara> ZAREZ <deklaracija_parametra>
 <deklaracija_parametra> ::= <ime_tipa> IDN
 	| <ime_tipa> IDN L_UGL_ZAGRADA D_UGL_ZAGRADA
+```
+3. ### deklaracije
+```
 <lista_deklaracija> ::= <deklaracija>
 	| <lista_deklaracija> <deklaracija>
 <deklaracija> ::= <ime_tipa> <lista_init_deklaratora> TOCKAZAREZ
+```
+4. ### inicijalizatori
+```
 <lista_init_deklaratora> ::= <init_deklarator>
 	| <lista_init_deklaratora> ZAREZ <init_deklarator>
 <init_deklarator> ::= <izravni_deklarator>
@@ -111,6 +147,4 @@
 	| IDN L_ZAGRADA <lista_parametara> D_ZAGRADA
 <inicijalizator> ::= <izraz_pridruzivanja>
 	| L_VIT_ZAGRADA <lista_izraza_pridruzivanja> D_VIT_ZAGRADA
-<lista_izraza_pridruzivanja> ::= <izraz_pridruzivanja>
-	| <lista_izraza_pridruzivanja> ZAREZ <izraz_pridruzivanja>
 ```
