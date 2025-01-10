@@ -1,1 +1,8 @@
 *.exe
+*.san
+*.in
+*.txt
+
+generator.cpp
+
+tablica.txt
