@@ -1,0 +1,11 @@
+# Ignore all executable files
+*.exe
+*.out
+*.bin
+*.
+
+# Ignore everything in the data folder
+data/
+
+# Ignore everything in the .vscode folder
+.vscode/
