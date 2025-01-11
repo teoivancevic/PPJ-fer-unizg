@@ -1,11 +1,10 @@
-# Ignore all executable files
 *.exe
-*.out
-*.bin
-*.
+*.san
+*.in
+*.txt
 
-# Ignore everything in the data folder
-data/
+generator.cpp
 
-# Ignore everything in the .vscode folder
-.vscode/
+bin/
+
+tablica.txt
