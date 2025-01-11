@@ -65,12 +65,12 @@ struct Node;
 
 namespace TreeUtils
 {
-    Node *buildTree();
-    string parseNodeName(const string &line);
+    static Node *buildTree();
+    static string parseNodeName(const string &line);
     static inline string parseContent(const string &line);
-    int getIndentationLevel(const string &line);
-    void printTree(Node *root, int level = 0);
-    void reportError(Node *node);
+    static int getIndentationLevel(const string &line);
+    static void printTree(Node *root, int level = 0);
+    static void reportError(Node *node);
 }
 
 // Tree node structure
@@ -91,6 +91,8 @@ struct Node
 
     int arraySize;             // For array declarations
     vector<string> paramTypes; // vec u typeinfo
+
+    inline bool isTerminating() { return !(symbol[0] == '<'); }
 
     Node();
 

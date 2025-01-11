@@ -1,46 +1,27 @@
-#ifndef DEKLARACIJA_PROCESSOR_HPP
-#define DEKLARACIJA_PROCESSOR_HPP
+#include "semantickiAnalizator.cpp"
 
-#include "utils.hpp"
+using namespace TreeUtils;
 
-// Za obradu deklaracija i definicija (4.4.6)
-class DeklaracijaProcessor {
-public:
-    DeklaracijaProcessor(SymbolTable* scope) : currentScope(scope) {}
-
-    void process_definicija_funkcije(Node* node);
-    void process_lista_parametara(Node* node);
-    void process_deklaracija_parametra(Node* node);
-    void process_lista_deklaracija(Node* node);
-    void process_deklaracija(Node* node);
-    void process_lista_init_deklaratora(Node* node);
-    void process_init_deklarator(Node* node);
-    void process_izravni_deklarator(Node* node);
-    void process_inicijalizator(Node* node);
-
-private:
-    SymbolTable* currentScope; 
-};
-
-
-
-
-void DeklaracijaProcessor::process_definicija_funkcije(Node* node) {
+void SemanticAnalyzer::DeklaracijaProcessor::process_definicija_funkcije(Node *node)
+{
     // Check base case
-    if (!node || node->children.size() < 2) return;
-    
+    if (!node || node->children.size() < 2)
+        return;
+
     // Get function name and return type
-    string funcName = node->children[1]->content; // IDN node
+    string funcName = node->children[1]->content;      // IDN node
     TypeInfo returnType = node->children[0]->typeInfo; // <ime_tipa> node
-    
+
     // Check return type isn't const-qualified
-    if (returnType.isConst()) {
+    if (returnType.isConst())
+    {
         reportError(node);
     }
 
     // Look up any previous declarations
-    auto* existingFunc = currentScope->lookup(funcName);
-    if (existingFunc && existingFunc->isDefined) {
+    auto *existingFunc = currentScope->lookup(funcName);
+    if (existingFunc && existingFunc->isDefined)
+    {
         reportError(node); // Function already defined
     }
 
@@ -52,15 +33,18 @@ void DeklaracijaProcessor::process_definicija_funkcije(Node* node) {
     funcEntry.type = returnType.toString();
 
     // Process parameters if present
-    if (node->children.size() > 4 && node->children[3]->symbol == "<lista_parametara>") {
+    if (node->children.size() > 4 && node->children[3]->symbol == "<lista_parametara>")
+    {
         process_lista_parametara(node->children[3]);
         funcEntry.paramTypes = node->children[3]->paramTypes;
     }
-    
+
     // Verify against previous declaration if exists
-    if (existingFunc) {
-        if (existingFunc->type != funcEntry.type || 
-            existingFunc->paramTypes != funcEntry.paramTypes) {
+    if (existingFunc)
+    {
+        if (existingFunc->type != funcEntry.type ||
+            existingFunc->paramTypes != funcEntry.paramTypes)
+        {
             reportError(node);
         }
     }
@@ -69,36 +53,45 @@ void DeklaracijaProcessor::process_definicija_funkcije(Node* node) {
     currentScope->insert(funcName, funcEntry);
 
     // Process function body
-    if (node->children.back()->symbol == "<slozena_naredba>") {
+    if (node->children.back()->symbol == "<slozena_naredba>")
+    {
         NaredbaProcessor naredbaProcessor(currentScope);
         naredbaProcessor.process_slozena_naredba(node->children.back());
     }
 }
 
-void DeklaracijaProcessor::process_lista_parametara(Node* node) {
-    if (!node || node->children.empty()) return;
+void SemanticAnalyzer::DeklaracijaProcessor::process_lista_parametara(Node *node)
+{
+    if (!node || node->children.empty())
+        return;
 
-    if (node->children.size() == 1) {
+    if (node->children.size() == 1)
+    {
         // Single parameter case
         process_deklaracija_parametra(node->children[0]);
         node->paramTypes = node->children[0]->paramTypes;
-    } else if (node->children.size() == 3) {
+    }
+    else if (node->children.size() == 3)
+    {
         // Multiple parameters case
         process_lista_parametara(node->children[0]);
         process_deklaracija_parametra(node->children[2]);
-        
+
         // Combine parameter types
         node->paramTypes = node->children[0]->paramTypes;
         node->paramTypes.insert(node->paramTypes.end(),
-                              node->children[2]->paramTypes.begin(),
-                              node->children[2]->paramTypes.end());
-        
+                                node->children[2]->paramTypes.begin(),
+                                node->children[2]->paramTypes.end());
+
         // Check for duplicate parameter names
         vector<string> paramNames;
-        for (auto& child : node->children) {
-            if (child->symbol == "<deklaracija_parametra>") {
+        for (auto &child : node->children)
+        {
+            if (child->symbol == "<deklaracija_parametra>")
+            {
                 string paramName = child->children[1]->content; // IDN node
-                if (find(paramNames.begin(), paramNames.end(), paramName) != paramNames.end()) {
+                if (find(paramNames.begin(), paramNames.end(), paramName) != paramNames.end())
+                {
                     reportError(node);
                 }
                 paramNames.push_back(paramName);
@@ -107,25 +100,29 @@ void DeklaracijaProcessor::process_lista_parametara(Node* node) {
     }
 }
 
-void DeklaracijaProcessor::process_deklaracija_parametra(Node* node) {
-    if (!node || node->children.size() < 2) return;
+void SemanticAnalyzer::DeklaracijaProcessor::process_deklaracija_parametra(Node *node)
+{
+    if (!node || node->children.size() < 2)
+        return;
 
     TypeInfo paramType = node->children[0]->typeInfo; // <ime_tipa> node
     string paramName = node->children[1]->content;    // IDN node
 
     // Check parameter isn't void
-    if (paramType.isVoid()) {
+    if (paramType.isVoid())
+    {
         reportError(node);
     }
 
     // Handle array parameter if present
-    if (node->children.size() > 2 && node->children[2]->symbol == "L_UGL_ZAGRADA") {
+    if (node->children.size() > 2 && node->children[2]->symbol == "L_UGL_ZAGRADA")
+    {
         paramType = TypeInfo::makeArrayType(paramType.getBaseType(), paramType.isConst());
     }
 
     // Store parameter info
     node->paramTypes.push_back(paramType.toString());
-    
+
     // Add parameter to current scope
     SymbolTableEntry paramEntry;
     paramEntry.name = paramName;
@@ -133,35 +130,47 @@ void DeklaracijaProcessor::process_deklaracija_parametra(Node* node) {
     currentScope->insert(paramName, paramEntry);
 }
 
-void DeklaracijaProcessor::process_lista_deklaracija(Node* node) {
-    if (!node || node->children.empty()) return;
+void SemanticAnalyzer::DeklaracijaProcessor::process_lista_deklaracija(Node *node)
+{
+    if (!node || node->children.empty())
+        return;
 
-    if (node->children.size() == 1) {
+    if (node->children.size() == 1)
+    {
         process_deklaracija(node->children[0]);
-    } else {
+    }
+    else
+    {
         process_lista_deklaracija(node->children[0]);
         process_deklaracija(node->children[1]);
     }
 }
 
-void DeklaracijaProcessor::process_deklaracija(Node* node) {
-    if (!node || node->children.size() < 3) return;
+void SemanticAnalyzer::DeklaracijaProcessor::process_deklaracija(Node *node)
+{
+    if (!node || node->children.size() < 3)
+        return;
 
     // Get base type from <ime_tipa>
     TypeInfo baseType = node->children[0]->typeInfo;
-    
+
     // Process initializer list with inherited type info
     node->children[1]->typeInfo = baseType;
     process_lista_init_deklaratora(node->children[1]);
 }
 
-void DeklaracijaProcessor::process_lista_init_deklaratora(Node* node) {
-    if (!node || node->children.empty()) return;
+void SemanticAnalyzer::DeklaracijaProcessor::process_lista_init_deklaratora(Node *node)
+{
+    if (!node || node->children.empty())
+        return;
 
-    if (node->children.size() == 1) {
+    if (node->children.size() == 1)
+    {
         node->children[0]->typeInfo = node->typeInfo;
         process_init_deklarator(node->children[0]);
-    } else {
+    }
+    else
+    {
         node->children[0]->typeInfo = node->typeInfo;
         node->children[2]->typeInfo = node->typeInfo;
         process_lista_init_deklaratora(node->children[0]);
@@ -169,65 +178,87 @@ void DeklaracijaProcessor::process_lista_init_deklaratora(Node* node) {
     }
 }
 
-void DeklaracijaProcessor::process_init_deklarator(Node* node) {
-    if (!node || node->children.empty()) return;
+void SemanticAnalyzer::DeklaracijaProcessor::process_init_deklarator(Node *node)
+{
+    if (!node || node->children.empty())
+        return;
 
     process_izravni_deklarator(node->children[0]);
 
     // Check if there's an initializer
-    if (node->children.size() > 1) {
+    if (node->children.size() > 1)
+    {
         IzrazProcessor izrazProcessor(currentScope);
         izrazProcessor.process_izraz_pridruzivanja(node->children[2]);
-        
+
         // Specific check for char initialization
-        if (node->children[0]->typeInfo.getBaseType() == BasicType::CHAR) {
+        if (node->children[0]->typeInfo.getBaseType() == BasicType::CHAR)
+        {
             // For char, the initializer type must be exactly char
             // This means `char c = c + 1` is invalid because c + 1 is int
-            if (node->children[2]->typeInfo.getBaseType() != BasicType::CHAR) {
-                reportError(node);
-            }
-        } else {
-            // For other types, use standard type compatibility
-            if (!node->children[2]->typeInfo.canImplicitlyConvertTo(node->children[0]->typeInfo)) {
+            if (node->children[2]->typeInfo.getBaseType() != BasicType::CHAR)
+            {
                 reportError(node);
             }
         }
-    } else {
+        else
+        {
+            // For other types, use standard type compatibility
+            if (!node->children[2]->typeInfo.canImplicitlyConvertTo(node->children[0]->typeInfo))
+            {
+                reportError(node);
+            }
+        }
+    }
+    else
+    {
         // Check if const variable without initializer
-        if (node->children[0]->typeInfo.isConst()) {
+        if (node->children[0]->typeInfo.isConst())
+        {
             reportError(node);
         }
     }
 }
 
-void DeklaracijaProcessor::process_izravni_deklarator(Node* node) {
-    if (!node || node->children.empty()) return;
+void SemanticAnalyzer::DeklaracijaProcessor::process_izravni_deklarator(Node *node)
+{
+    if (!node || node->children.empty())
+        return;
 
     string name = node->children[0]->content; // IDN node
-    
+
     // Check for existing declaration in current scope
-    if (currentScope->lookup(name)) {
+    if (currentScope->lookup(name))
+    {
         reportError(node);
     }
 
-    if (node->children.size() == 1) {
+    if (node->children.size() == 1)
+    {
         // Simple variable declaration
         node->typeInfo = node->typeInfo; // Inherit from parent
-    } else if (node->children.size() == 4 && node->children[1]->symbol == "L_UGL_ZAGRADA") {
+    }
+    else if (node->children.size() == 4 && node->children[1]->symbol == "L_UGL_ZAGRADA")
+    {
         // Array declaration
         int size = stoi(node->children[2]->content);
-        if (size <= 0 || size > 1024) {
+        if (size <= 0 || size > 1024)
+        {
             reportError(node);
         }
-        node->typeInfo = TypeInfo::makeArrayType(node->typeInfo.getBaseType(), 
-                                               node->typeInfo.isConst());
-    } else if (node->children.size() >= 4 && node->children[1]->symbol == "L_ZAGRADA") {
+        node->typeInfo = TypeInfo::makeArrayType(node->typeInfo.getBaseType(),
+                                                 node->typeInfo.isConst());
+    }
+    else if (node->children.size() >= 4 && node->children[1]->symbol == "L_ZAGRADA")
+    {
         // Function declaration
         vector<TypeInfo> paramTypes;
-        if (node->children[2]->symbol == "<lista_parametara>") {
+        if (node->children[2]->symbol == "<lista_parametara>")
+        {
             process_lista_parametara(node->children[2]);
             // Convert string param types to TypeInfo
-            for (const auto& paramType : node->children[2]->paramTypes) {
+            for (const auto &paramType : node->children[2]->paramTypes)
+            {
                 // Convert string to TypeInfo...
             }
         }
@@ -242,19 +273,26 @@ void DeklaracijaProcessor::process_izravni_deklarator(Node* node) {
     currentScope->insert(name, entry);
 }
 
-void DeklaracijaProcessor::process_inicijalizator(Node* node) {
-    if (!node || node->children.empty()) return;
+void SemanticAnalyzer::DeklaracijaProcessor::process_inicijalizator(Node *node)
+{
+    if (!node || node->children.empty())
+        return;
 
-    if (node->children.size() == 1) {
+    if (node->children.size() == 1)
+    {
         // Single expression initializer
         IzrazProcessor izrazProcessor(currentScope);
         izrazProcessor.process_izraz_pridruzivanja(node->children[0]);
         node->typeInfo = node->children[0]->typeInfo;
-    } else {
+    }
+    else
+    {
         // Array initializer
         IzrazProcessor izrazProcessor(currentScope);
-        for (auto* child : node->children) {
-            if (child->symbol == "<izraz_pridruzivanja>") {
+        for (auto *child : node->children)
+        {
+            if (child->symbol == "<izraz_pridruzivanja>")
+            {
                 izrazProcessor.process_izraz_pridruzivanja(child);
                 // Collect types for array elements...
             }
@@ -262,8 +300,3 @@ void DeklaracijaProcessor::process_inicijalizator(Node* node) {
         // Set array initializer type info...
     }
 }
-
-
-
-
-#endif // UTILS_HPP

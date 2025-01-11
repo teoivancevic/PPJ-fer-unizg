@@ -46,7 +46,6 @@ namespace TypeUtils
     static std::string concatToString(const vector<TypeInfo> &c, const std::string delim = " ");
 }
 
-// A class to represent the complete type system
 struct TypeInfo
 {
 private:
@@ -75,6 +74,10 @@ public:
     bool canImplicitlyConvertTo(const TypeInfo &target) const
     {
         return TypeUtils::areTypesCompatible(*this, target);
+    }
+    bool canImplicitlyConvertTo(const BasicType &target) const
+    {
+        return canImplicitlyConvertTo(TypeInfo(target));
     }
 
     // Getters
@@ -215,6 +218,7 @@ namespace TypeUtils
     {
         return TypeInfo(returnType, params);
     }
+
     static std::string concatToString(const vector<TypeInfo> &c, const std::string delim)
     {
         std::string rez = "";
