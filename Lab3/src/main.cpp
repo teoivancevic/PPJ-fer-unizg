@@ -1,6 +1,6 @@
 // #include "Types.hpp"
 // #include "Data.hpp"
-#include "semantickiAnalizator.cpp"
+#include "Procesori-NOVO.cpp"
 
 
 // int main()
