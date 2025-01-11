@@ -6,6 +6,7 @@
 #include <vector>
 #include <map>
 #include <sstream>
+#include <algorithm> 
 
 using namespace std;
 
@@ -112,6 +113,7 @@ public:
 struct Node {
     string symbol;         // Node symbol (A, B, etc.)
     vector<Node*> children;
+    Node* parent;          // Parent node pointer
     string content;        // Content within the node (a1xxx, b2yy, etc.)
 
     // New semantic-related members
@@ -160,8 +162,6 @@ namespace TypeUtils {
     }
 
     bool areTypesCompatible(const TypeInfo& source, const TypeInfo& target) {
-        
-        
         // Same type is always compatible
         if (source == target) return true;
 
@@ -170,38 +170,43 @@ namespace TypeUtils {
             return false;  // void only compatible with itself
         }
 
-        // Handle const relationships (const(T) ⇠ T and T ⇠ const(T))
+        // Handle basic type conversion cases
         if (source.getBaseType() == target.getBaseType()) {
+            // If source isn't const or target is const, basic types are compatible
             if (!source.isConst() || target.isConst()) {
                 return true;
             }
         }
 
-        // Handle char ⇠ int conversion
+        // Handle char to int conversion (with const preservation)
         if (source.getBaseType() == BasicType::CHAR && 
             target.getBaseType() == BasicType::INT) {
+            // For const char to int, target must be const
+            if (source.isConst() && !target.isConst()) {
+                return false;
+            }
             return true;
         }
 
         // Handle array type conversions
         if (isArrayType(source) && isArrayType(target)) {
-            // niz(T) ⇠ niz(const(T))
-            if (!source.isConst() && target.isConst() && 
-                source.getBaseType() == target.getBaseType()) {
-                return true;
+            // Arrays must have compatible base types
+            if (source.getBaseType() != target.getBaseType()) {
+                return false;
             }
+            // niz(T) ⇠ niz(const(T)) but not vice versa
+            return !source.isConst() || target.isConst();
         }
 
         // Handle function type compatibility
         if (isFunctionType(source) && isFunctionType(target)) {
-            // Check return type
+            // Return types must be compatible
             if (!areTypesCompatible(
                 TypeInfo(source.getReturnType()), 
                 TypeInfo(target.getReturnType()))) {
                 return false;
             }
 
-            // Check parameters
             const auto& sourceParams = source.getFunctionParams();
             const auto& targetParams = target.getFunctionParams();
             
@@ -209,6 +214,7 @@ namespace TypeUtils {
                 return false;
             }
 
+            // Parameters must be compatible
             for (size_t i = 0; i < sourceParams.size(); i++) {
                 if (!areTypesCompatible(sourceParams[i], targetParams[i])) {
                     return false;
@@ -217,9 +223,7 @@ namespace TypeUtils {
             return true;
         }
 
-        // Everything else is incompatible
         return false;
-   
     }
 }
 struct SymbolTableEntry {
@@ -396,6 +400,7 @@ Node* buildTree() {
         cin.seekg(-line.length() - 1, ios::cur); // Push back the line
         Node* child = buildTree();
         if (child != nullptr) {
+            child->parent = currentNode;  // Set parent pointer
             currentNode->children.push_back(child);
         }
     }
