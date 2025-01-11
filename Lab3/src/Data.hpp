@@ -247,4 +247,6 @@ void printTree(Node *root, int level = 0)
     }
 }
 
+using SymbolTableEntry = SymbolTable::Entry;
+
 #pragma endregion Tree

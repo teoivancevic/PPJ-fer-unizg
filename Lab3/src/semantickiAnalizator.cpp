@@ -1,3 +1,4 @@
+#include "utils.hpp"
 #include "Processors.hpp"
 
 class SemanticAnalyzer
@@ -6,6 +7,8 @@ private:
     Node *root;
     SymbolTable *currentScope;
     IzrazProcessor izrazProcessor;
+    NaredbaProcessor naredbaProcessor;
+    DeklaracijaProcessor deklaracijaProcessor;
 
     // Helper functions
     bool isNewScope(Node *node)
@@ -26,15 +29,15 @@ private:
         if (node->symbol == "deklaracija")
         {
             // Handle variable declaration
-            SymbolTable::Entry entry;
+            SymbolTableEntry entry;
             // Fill in entry details based on node...
             currentScope->insert(node->content, entry);
         }
         else if (node->symbol == "definicija_funkcije")
         {
             // Handle function definition
-            SymbolTable::Entry entry;
-            entry.type = TypeInfo();
+            SymbolTableEntry entry;
+            entry.isFunction = true;
             // Fill in other entry details...
             currentScope->insert(node->content, entry);
         }
@@ -49,9 +52,9 @@ private:
     void checkMainExists()
     {
         // Check if main function exists with correct signature
-        SymbolTable::Entry *mainEntry = currentScope->lookup("main");
-        if (!mainEntry || !mainEntry->type.isFunc() || mainEntry->type.getBaseType() != BasicType::INT ||
-            mainEntry->type.getFunctionParams() == vector<TypeInfo>{BasicType::VOID})
+        SymbolTableEntry *mainEntry = currentScope->lookup("main");
+        if (!mainEntry || !mainEntry->isFunction || mainEntry->type != "int" ||
+            mainEntry->paramTypes != vector<string>{"void"})
         {
             cout << "main" << endl;
             exit(0);
@@ -62,24 +65,53 @@ private:
     {
         // Check if all declared functions are defined
         // Implement function definition checking
+        // Iterate through all symbols in the global scope
+        for (const auto &entry : currentScope->getSymbols())
+        { // You'll need to add a getter for symbols
+            const string &name = entry.first;
+            const SymbolTableEntry &symbol = entry.second;
+
+            // Check only function entries
+            if (symbol.isFunction && !symbol.isDefined)
+            {
+                // Found a function declaration without definition
+                cout << name << endl;
+                exit(0);
+            }
+        }
     }
 
 public:
-    SemanticAnalyzer(Node *rootNode) : root(rootNode), currentScope(nullptr), izrazProcessor(currentScope) {}
+    SemanticAnalyzer(Node *rootNode) : root(rootNode),
+                                       currentScope(nullptr),
+                                       izrazProcessor(currentScope),
+                                       naredbaProcessor(currentScope),
+                                       deklaracijaProcessor(currentScope)
+    {
+    }
 
     void analyze()
     {
         // 1. Build symbol tables
         currentScope = new SymbolTable(nullptr); // Global scope
         izrazProcessor = IzrazProcessor(currentScope);
+        naredbaProcessor = NaredbaProcessor(currentScope);
+        deklaracijaProcessor = DeklaracijaProcessor(currentScope);
         buildSymbolTables(root);
 
         // 2. Perform semantic analysis
         semanticAnalysis(root);
 
         // 3. Final checks
+        // Check for main immediately after building tables
+        if (!currentScope->lookup("main"))
+        {
+            cout << "main" << endl;
+            exit(0);
+        }
+
         // checkMainExists();              // TODO: @teo kj je ovo
-        // checkAllFunctionsDefined();     // TODO: @teo kj je ovo
+        checkAllFunctionsDefined(); // TODO: @teo kj je ovo
     }
 
     // 1. First Pass - Build Symbol Tables
@@ -110,7 +142,7 @@ public:
         // Restore previous scope
         if (isNewScope(node))
         {
-            currentScope = currentScope->parent;
+            currentScope = currentScope->getParent();
         }
     }
 
@@ -120,20 +152,79 @@ public:
         if (!node)
             return;
 
-        // Check each type of node according to semantic rules
-        // if (node->symbol == "izraz_pridruzivanja") {
-        //     checkAssignment(node);
-        // }
-        // ... other checks
-        // cerr << node->symbol << endl;
-
+        // First process this node based on its type
         if (node->symbol == "<prijevodna_jedinica>")
         {
-            // Check global declarations
+            naredbaProcessor.process_prijevodna_jedinica(node);
         }
+        // Expression processing
         else if (node->symbol == "<primarni_izraz>")
         {
             izrazProcessor.process_primarni_izraz(node);
+        }
+        else if (node->symbol == "<postfiks_izraz>")
+        {
+            izrazProcessor.process_postfiks_izraz(node);
+        }
+        else if (node->symbol == "<lista_argumenata>")
+        {
+            izrazProcessor.process_lista_argumenata(node);
+        }
+        else if (node->symbol == "<unarni_izraz>")
+        {
+            izrazProcessor.process_unarni_izraz(node);
+        }
+        else if (node->symbol == "<unarni_operator>")
+        {
+            izrazProcessor.process_unarni_operator(node);
+        }
+        else if (node->symbol == "<cast_izraz>")
+        {
+            izrazProcessor.process_cast_izraz(node);
+        }
+        else if (node->symbol == "<ime_tipa>")
+        {
+            izrazProcessor.process_ime_tipa(node);
+        }
+        else if (node->symbol == "<specifikator_tipa>")
+        {
+            izrazProcessor.process_specifikator_tipa(node);
+        }
+        else if (node->symbol == "<multiplikativni_izraz>")
+        {
+            izrazProcessor.process_multiplikativni_izraz(node);
+        }
+        else if (node->symbol == "<aditivni_izraz>")
+        {
+            izrazProcessor.process_aditivni_izraz(node);
+        }
+        else if (node->symbol == "<odnosni_izraz>")
+        {
+            izrazProcessor.process_odnosni_izraz(node);
+        }
+        else if (node->symbol == "<jednakosni_izraz>")
+        {
+            izrazProcessor.process_jednakosni_izraz(node);
+        }
+        else if (node->symbol == "<bin_i_izraz>")
+        {
+            izrazProcessor.process_bin_i_izraz(node);
+        }
+        else if (node->symbol == "<bin_xili_izraz>")
+        {
+            izrazProcessor.process_bin_xili_izraz(node);
+        }
+        else if (node->symbol == "<bin_ili_izraz>")
+        {
+            izrazProcessor.process_bin_ili_izraz(node);
+        }
+        else if (node->symbol == "<log_i_izraz>")
+        {
+            izrazProcessor.process_log_i_izraz(node);
+        }
+        else if (node->symbol == "<log_ili_izraz>")
+        {
+            izrazProcessor.process_log_ili_izraz(node);
         }
         else if (node->symbol == "<izraz_pridruzivanja>")
         {
@@ -143,21 +234,63 @@ public:
         {
             izrazProcessor.process_izraz(node);
         }
-        else if (node->symbol == "<izraz_pridruzivanja>")
+        // Statement processing
+        else if (node->symbol == "<slozena_naredba>")
         {
-            checkAssignment(node);
+            naredbaProcessor.process_slozena_naredba(node);
+        }
+        else if (node->symbol == "<lista_naredbi>")
+        {
+            naredbaProcessor.process_lista_naredbi(node);
+        }
+        else if (node->symbol == "<naredba>")
+        {
+            naredbaProcessor.process_naredba(node);
+        }
+        else if (node->symbol == "<izraz_naredba>")
+        {
+            naredbaProcessor.process_izraz_naredba(node);
+        }
+        else if (node->symbol == "<naredba_grananja>")
+        {
+            naredbaProcessor.process_naredba_grananja(node);
+        }
+        else if (node->symbol == "<naredba_petlje>")
+        {
+            naredbaProcessor.process_naredba_petlje(node);
+        }
+        else if (node->symbol == "<naredba_skoka>")
+        {
+            naredbaProcessor.process_naredba_skoka(node);
+        }
+        // Declaration processing
+        else if (node->symbol == "<vanjska_deklaracija>")
+        {
+            naredbaProcessor.process_vanjska_deklaracija(node);
         }
         else if (node->symbol == "<definicija_funkcije>")
         {
-            // Validate function definition
+            deklaracijaProcessor.process_definicija_funkcije(node);
+        }
+        else if (node->symbol == "<lista_parametara>")
+        {
+            deklaracijaProcessor.process_lista_parametara(node);
+        }
+        else if (node->symbol == "<deklaracija_parametra>")
+        {
+            deklaracijaProcessor.process_deklaracija_parametra(node);
+        }
+        else if (node->symbol == "<lista_deklaracija>")
+        {
+            deklaracijaProcessor.process_lista_deklaracija(node);
         }
         else if (node->symbol == "<deklaracija>")
         {
-            // Validate variable/function declarations
+            deklaracijaProcessor.process_deklaracija(node);
         }
-        // ... handle other node types
 
-        // Recurse on children
+        // Then recursively process all children
+        // This ensures bottom-up processing which is important for type checking
         for (Node *child : node->children)
         {
             semanticAnalysis(child);
