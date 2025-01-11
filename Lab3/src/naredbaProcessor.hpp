@@ -192,7 +192,7 @@ void NaredbaProcessor::process_naredba_skoka(Node* node) {
     }
 
     // Break and continue
-    if (node->children.size() == 2 && 
+    if (node->children.size() == 2 &&
         (node->children[0]->content.find("KR_CONTINUE") == 0 ||
          node->children[0]->content.find("KR_BREAK") == 0)) {
         
@@ -222,8 +222,14 @@ void NaredbaProcessor::process_naredba_skoka(Node* node) {
             current = current->parent;
         }
 
-        if (!current || !current->typeInfo.isVoid()) {
+        if (!current) {
             reportError(node);
+            return;
+        }
+
+        if (!current->typeInfo.isVoid()) {
+            // Non-void function must return a value
+            reportError(node);//, "<naredba_skoka> ::= KR_RETURN TOCKAZAREZ");
             return;
         }
         return;
@@ -242,11 +248,19 @@ void NaredbaProcessor::process_naredba_skoka(Node* node) {
             return;
         }
 
+        // Process the return expression
         IzrazProcessor izrazProcessor(currentScope);
         izrazProcessor.process_izraz(node->children[1]);
-        
+
+        if (current->typeInfo.isVoid()) {
+            // Void function must not return a value
+            reportError(node);//, "<naredba_skoka> ::= KR_RETURN <izraz> TOCKAZAREZ");
+            return;
+        }
+
         if (!node->children[1]->typeInfo.canImplicitlyConvertTo(current->typeInfo)) {
-            reportError(node);
+            // Type mismatch in return value
+            reportError(node);//, "<naredba_skoka> ::= KR_RETURN <izraz> TOCKAZAREZ");
             return;
         }
         return;
