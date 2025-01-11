@@ -147,7 +147,7 @@ void SemanticAnalyzer::semanticAnalysis(Node *node)
         naredbaProcessor.process_prijevodna_jedinica(node);
     }
 
-#pragma region expression_processing
+
 
     else if (node->symbol == "<primarni_izraz>")
     {
@@ -226,9 +226,9 @@ void SemanticAnalyzer::semanticAnalysis(Node *node)
         izrazProcessor.process_izraz(node);
     }
 
-#pragma endregion expression_processing
 
-#pragma region statement_processing
+
+
 
     else if (node->symbol == "<slozena_naredba>")
     {
@@ -259,9 +259,7 @@ void SemanticAnalyzer::semanticAnalysis(Node *node)
         naredbaProcessor.process_naredba_skoka(node);
     }
 
-#pragma endregion statement_processing
 
-#pragma region declaration_processing
 
     else if (node->symbol == "<vanjska_deklaracija>")
     {
@@ -288,7 +286,7 @@ void SemanticAnalyzer::semanticAnalysis(Node *node)
         deklaracijaProcessor.process_deklaracija(node);
     }
 
-#pragma endregion declaration_processing
+
 
     for (Node *child : node->children)
         semanticAnalysis(child);
