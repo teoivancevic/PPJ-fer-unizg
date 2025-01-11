@@ -1,3 +1,6 @@
+#ifndef TYPES_HPP
+#define TYPES_HPP
+
 #include "utils.hpp"
 
 namespace Constants
@@ -7,17 +10,17 @@ namespace Constants
     const int MIN_CHAR = 0;
     const int MAX_CHAR = 255;
 
-    bool isValidNumConstant(int value)
+    inline bool isValidNumConstant(int value)
     {
         return value >= MIN_INT && value <= MAX_INT;
     }
 
-    bool isValidNumConstant(char value)
+    inline bool isValidNumConstant(char value)
     {
         return value >= MIN_CHAR && value <= MAX_CHAR;
     }
 
-    bool isValidEscapeSequence(char c)
+    inline bool isValidEscapeSequence(char c)
     {
         return c == 't' || c == 'n' || c == '0' ||
                c == '\'' || c == '\"' || c == '\\';
@@ -56,10 +59,16 @@ private:
     // For function types
     vector<TypeInfo> functionParams;
     BasicType &returnType = baseType;
+    
+    //const static TypeInfo VOID;  // Only declare it
 
 public:
     TypeInfo() {}
 
+    static const TypeInfo VOID; // Universal VOID TypeInfo
+    //inline static const TypeInfo VOID = TypeInfo(BasicType::VOID);  
+
+    
     // Constructor for variable types
     TypeInfo(BasicType type, bool constQualified = false, bool array = false)
         : baseType(type), isConst_(constQualified), isArray_(array) {}
@@ -68,7 +77,8 @@ public:
     TypeInfo(BasicType returnType, vector<TypeInfo> params)
         : baseType(returnType), functionParams(!params.empty() ? params : vector<TypeInfo>{TypeInfo::VOID}) {}
 
-    const static TypeInfo VOID; // Universal VOID TypeInfo
+    
+    //inline static const TypeInfo VOID{BasicType::VOID};
 
     // Method to check implicit type conversion
     bool canImplicitlyConvertTo(const TypeInfo &target) const
@@ -127,11 +137,16 @@ public:
     }
 };
 
-const TypeInfo TypeInfo::VOID = TypeInfo(BasicType::VOID);
+//const TypeInfo TypeInfo::VOID = TypeInfo(BasicType::VOID); // TEO commented this
+//const static TypeInfo VOID;  // Only declare it
+//const TypeInfo TypeInfo::VOID(BasicType::VOID);
+
+
+
 
 namespace TypeUtils
 {
-    static string typeToString(const BasicType &type)
+    inline static string typeToString(const BasicType &type)
     {
         switch (type)
         {
@@ -145,7 +160,7 @@ namespace TypeUtils
             return "unknown";
         }
     }
-    static string typeToString(const TypeInfo &type)
+    inline static string typeToString(const TypeInfo &type)
     {
         string result = TypeUtils::typeToString(type.getBaseType());
         if (type.isConst())
@@ -230,4 +245,13 @@ namespace TypeUtils
         }
         return rez;
     }
+
+    
 }
+
+
+
+const TypeInfo TypeInfo::VOID(BasicType::VOID);
+
+#endif
+

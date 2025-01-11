@@ -1,3 +1,7 @@
+#ifndef DATA_HPP
+#define DATA_HPP
+
+
 #include "Types.hpp"
 #include <fstream>
 
@@ -106,6 +110,14 @@ struct Node
         }
     }
 };
+
+inline Node::Node(std::string content) {
+    this->content = content;
+    this->symbol = "";
+    this->lexicalUnit = "";
+    this->lineNumber = 0;
+    this->isLValue = false;
+}
 
 namespace TreeUtils
 {
@@ -261,3 +273,7 @@ namespace TreeUtils
 }
 
 using SymbolTableEntry = SymbolTable::Entry;
+
+
+
+#endif
