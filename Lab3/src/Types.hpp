@@ -40,20 +40,24 @@ namespace TypeUtils
     inline static bool isNumericType(const TypeInfo &type);
     inline static bool isFunctionType(const TypeInfo &type);
     inline static bool isArrayType(const TypeInfo &type);
+
     static TypeInfo makeArrayType(BasicType type, bool constQualified = false);
     static TypeInfo makeFunctionType(BasicType returnType = BasicType::VOID, vector<TypeInfo> params = vector<TypeInfo>());
+
     static bool areTypesCompatible(const TypeInfo &source, const TypeInfo &target);
+
     static string typeToString(const BasicType &type);
     static string typeToString(const TypeInfo &type);
+
     static std::string concatToString(const vector<TypeInfo> &c, const std::string delim = " ");
 }
 
 struct TypeInfo
 {
-private:
     BasicType baseType = BasicType::VOID;
     bool isConst_ = false;
     bool isArray_ = false;
+    bool invalid = false;
 
     // For function types
     vector<TypeInfo> functionParams;
@@ -73,7 +77,9 @@ public:
 
     // Constructor for function types
     TypeInfo(BasicType returnType, vector<TypeInfo> params)
-        : baseType(returnType), functionParams(!params.empty() ? params : vector<TypeInfo>{TypeInfo::VOID}) {}
+        : baseType(returnType), functionParams(params)
+    {
+    }
 
     // inline static const TypeInfo VOID{BasicType::VOID};
 
@@ -136,7 +142,8 @@ public:
 
 namespace TypeUtils
 {
-    inline static string typeToString(const BasicType &type)
+
+    static string typeToString(const BasicType &type)
     {
         switch (type)
         {
@@ -150,7 +157,7 @@ namespace TypeUtils
             return "unknown";
         }
     }
-    inline static string typeToString(const TypeInfo &type)
+    static string typeToString(const TypeInfo &type)
     {
         string result = TypeUtils::typeToString(type.getBaseType());
         if (type.isConst())
@@ -176,18 +183,16 @@ namespace TypeUtils
         return !type.isFunc() && !type.isArray() && type.getBaseType() == BasicType::INT ||
                type.getBaseType() == BasicType::CHAR;
     }
-
-    inline bool isFunctionType(const TypeInfo &type)
+    inline static bool isFunctionType(const TypeInfo &type)
     {
         return type.isFunc();
     }
-
-    inline bool isArrayType(const TypeInfo &type)
+    inline static bool isArrayType(const TypeInfo &type)
     {
         return type.isArray();
     }
 
-    inline static bool areTypesCompatible(const TypeInfo &source, const TypeInfo &target)
+    static bool areTypesCompatible(const TypeInfo &source, const TypeInfo &target)
     {
         // Same types always compatible
         if (source == target)
@@ -213,12 +218,10 @@ namespace TypeUtils
         return false;
     }
 
-    // Static factory methods
     static TypeInfo makeArrayType(BasicType type, bool constQualified)
     {
         return TypeInfo(type, constQualified, true);
     }
-
     static TypeInfo makeFunctionType(BasicType returnType, vector<TypeInfo> params)
     {
         return TypeInfo(returnType, params);

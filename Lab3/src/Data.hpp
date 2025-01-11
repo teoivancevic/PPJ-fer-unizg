@@ -6,28 +6,11 @@ struct SymbolTable
 {
     struct Entry
     {
-        // Zašto ne koristiti TypeInfo?
-        string type;
-        bool isConstant = false;
-        bool isFunction = false;
-        bool isDefined = false;
-        vector<string> paramTypes;
-
+        TypeInfo type;
         string name;
+        bool isDefined = false;
         int arraySize = -1; // For arrays (-1 if not array)
     };
-
-    Entry makeEntry(const TypeInfo &info)
-    {
-        Entry e;
-
-        e.type = TypeUtils::typeToString(info.getBaseType());
-        e.isConstant = info.isConst();
-        e.isFunction = info.isFunc();
-        e.arraySize = info.isArray() ? 0 : -1;
-
-        return e;
-    }
 
     map<string, Entry> symbols;
     SymbolTable *parent; // For scope chaining
@@ -43,8 +26,6 @@ struct SymbolTable
         symbols.insert({name, entry});
         return true;
     }
-
-    bool insert(const string &name, const TypeInfo &info) { return insert(name, makeEntry(info)); }
 
     Entry *lookup(const string &name)
     {
@@ -95,7 +76,8 @@ struct Node
 
     Node();
 
-    Node(string symbol, Node *parent = nullptr) : symbol(symbol), parent(parent) {}
+    Node(string symbol, Node *parent = nullptr, string content = "")
+        : symbol(symbol), parent(parent), content(content) {}
 
     bool isTerminating() { return !(symbol[0] == '<'); }
 
@@ -114,15 +96,6 @@ struct Node
     }
 };
 
-inline Node::Node(std::string content)
-{
-    this->content = content;
-    this->symbol = "";
-    this->lexicalUnit = "";
-    this->lineNumber = 0;
-    this->isLValue = false;
-}
-
 namespace TreeUtils
 {
     Node *buildTree()
@@ -138,9 +111,11 @@ namespace TreeUtils
             auto [indent, content] = parseContent(line);
             auto current = stack.back().second;
 
+            while (indent <= stack.back().first)
+                stack.pop_back();
+
             if (content[0] != '<')
-                forEachWord(content, [current](const string &item)
-                            { current->children.push_back(new Node(item, current)); });
+                current->children.push_back(new Node(readNextWord(content), current, content));
 
             else if (indent > stack.back().first)
             {
@@ -148,9 +123,6 @@ namespace TreeUtils
                 stack.push_back({indent, next});
                 current->children.push_back(next);
             }
-
-            while (indent <= stack.back().first)
-                stack.pop_back();
         }
         return stack[0].second;
     }
@@ -174,71 +146,46 @@ namespace TreeUtils
         return spaces;
     }
 
-    // // Function to print the tree (for verification)
-    // void printTree(Node *root, int level)
-    // {
-    //     if (root == nullptr)
-    //         return;
-
-    //     string indent(level, ' ');
-
-    //     if (!root->content.empty())
-    //     {
-    //         cout << indent << root->content << endl;
-    //     }
-    //     else
-    //     {
-    //         cout << indent << "<" << root->symbol << ">" << endl;
-    //     }
-
-    //     for (Node *child : root->children)
-    //     {
-    //         printTree(child, level + 1);
-    //     }
-    // }
-
     void reportError(Node *node)
     {
         // First print the non-terminal (left side of production)
         cout << node->symbol << " ::= ";
 
-        // Then print all child nodes (right side of production)
-        // for (Node *child : node->children)
-        // {
-        //     if (!child->content.empty())
-        //     {
-        //         // // This is a terminal with line number and lexeme
-        //         // // Split the content to get the parts
-        //         // istringstream iss(child->content);
-        //         // string token, line, lexeme;
-        //         // iss >> token >> line >> lexeme;
+        // Then print all child nodes(right side of production)
+        for (Node *child : node->children)
+        {
+            if (!child->content.empty())
+            {
+                // // This is a terminal with line number and lexeme
+                // // Split the content to get the parts
+                // istringstream iss(child->content);
+                // string token, line, lexeme;
+                // iss >> token >> line >> lexeme;
 
-        //         // // Print in the format TOKEN(line,lexeme)
-        //         // cout << token << "(" << line << "," << lexeme << ")";
+                // // Print in the format TOKEN(line,lexeme)
+                // cout << token << "(" << line << "," << lexeme << ")";
 
-        //         // // If there are more children after this one, add a space
-        //         // if (child != node->children.back())
-        //         // {
-        //         //     cout << " ";
-        //         // }
-        //     }
-        //     else
-        //     {
-        //         // This is a non-terminal (has angle brackets)
-        //         cout << child->symbol;
+                // // If there are more children after this one, add a space
+                // if (child != node->children.back())
+                // {
+                //     cout << " ";
+                // }
+            }
+            else
+            {
+                // This is a non-terminal (has angle brackets)
+                cout << child->symbol;
 
-        //         // If there are more children after this one, add a space
-        //         if (child != node->children.back())
-        //         {
-        //             cout << " ";
-        //         }
-        //     }
-        // }
+                // If there are more children after this one, add a space
+                if (child != node->children.back())
+                {
+                    cout << " ";
+                }
+            }
+        }
         cout << endl;
         exit(0);
     }
 }
 
 using SymbolTableEntry = SymbolTable::Entry;
-
-#endif
