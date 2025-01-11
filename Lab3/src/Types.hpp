@@ -40,11 +40,11 @@ namespace TypeUtils
     inline static bool isArrayType(const TypeInfo &type);
     static TypeInfo makeArrayType(BasicType type, bool constQualified = false);
     static TypeInfo makeFunctionType(BasicType returnType = BasicType::VOID, vector<TypeInfo> params = vector<TypeInfo>());
-    inline static bool areTypesCompatible(const TypeInfo &source, const TypeInfo &target);
-    inline static string typeToString(const BasicType &type);
+    static bool areTypesCompatible(const TypeInfo &source, const TypeInfo &target);
+    static string typeToString(const BasicType &type);
+    static string typeToString(const TypeInfo &type);
+    static std::string concatToString(const vector<TypeInfo> &c, const std::string delim = " ");
 }
-
-#pragma region definitions
 
 // A class to represent the complete type system
 struct TypeInfo
@@ -128,7 +128,7 @@ const TypeInfo TypeInfo::VOID = TypeInfo(BasicType::VOID);
 
 namespace TypeUtils
 {
-    inline static string typeToString(const BasicType &type)
+    static string typeToString(const BasicType &type)
     {
         switch (type)
         {
@@ -142,7 +142,7 @@ namespace TypeUtils
             return "unknown";
         }
     }
-    inline static string typeToString(const TypeInfo &type)
+    static string typeToString(const TypeInfo &type)
     {
         string result = TypeUtils::typeToString(type.getBaseType());
         if (type.isConst())
@@ -156,13 +156,9 @@ namespace TypeUtils
             if (type.isVoidParam())
                 result += "void";
             else
-                result += "[" + concatToString_r(type.getFunctionParams(), ",") + "]";
+                result += "[" + concatToString(type.getFunctionParams(), ",") + "]";
 
             result += " -> " + TypeUtils::typeToString(type.getReturnType()) + ")";
-        }
-        if (type.isVoid())
-        {
-            result = "void";
         }
         return result;
     }
@@ -210,15 +206,24 @@ namespace TypeUtils
     }
 
     // Static factory methods
-    static TypeInfo makeArrayType(BasicType type, bool constQualified = false)
+    static TypeInfo makeArrayType(BasicType type, bool constQualified)
     {
         return TypeInfo(type, constQualified, true);
     }
 
-    static TypeInfo makeFunctionType(BasicType returnType = BasicType::VOID, vector<TypeInfo> params = vector<TypeInfo>())
+    static TypeInfo makeFunctionType(BasicType returnType, vector<TypeInfo> params)
     {
         return TypeInfo(returnType, params);
     }
+    static std::string concatToString(const vector<TypeInfo> &c, const std::string delim)
+    {
+        std::string rez = "";
+        for (int i = (int)c.size() - 1; i > -1; i--)
+        {
+            rez += c[i].toString();
+            if (i)
+                rez += delim;
+        }
+        return rez;
+    }
 }
-
-#pragma endregion definitons

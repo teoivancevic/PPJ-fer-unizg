@@ -1,8 +1,6 @@
 #include "Types.hpp"
 #include <fstream>
 
-#pragma region Table
-
 struct SymbolTable
 {
     struct Entry
@@ -63,9 +61,17 @@ struct SymbolTable
     SymbolTable *createChildScope() { return new SymbolTable(this); }
 };
 
-#pragma endregion Table
+struct Node;
 
-#pragma region Tree
+namespace TreeUtils
+{
+    Node *buildTree();
+    string parseNodeName(const string &line);
+    static inline string parseContent(const string &line);
+    int getIndentationLevel(const string &line);
+    void printTree(Node *root, int level = 0);
+    void reportError(Node *node);
+}
 
 // Tree node structure
 struct Node
@@ -101,7 +107,6 @@ struct Node
 
 namespace TreeUtils
 {
-
     Node *buildTree()
     {
         string line;
@@ -120,18 +125,18 @@ namespace TreeUtils
             currentNode = new Node(parseNodeName(line));
         else
         { // content node
-            currentNode = new Node("");
-            currentNode->content = line;
+          // currentNode = new Node("");
+          // currentNode->content = line;
 
-            // Parse and set lexical unit if this is a terminal
-            istringstream iss(line);
-            string token, line_num, lexeme;
-            iss >> token;    // Get token type (NIZ_ZNAKOVA, etc)
-            iss >> line_num; // Get line number
+            // // Parse and set lexical unit if this is a terminal
+            // istringstream iss(line);
+            // string token, line_num, lexeme;
+            // iss >> token;    // Get token type (NIZ_ZNAKOVA, etc)
+            // iss >> line_num; // Get line number
 
-            // Get the rest of the line as lexeme (to handle strings with spaces)
-            getline(iss >> ws, lexeme);
-            currentNode->lexicalUnit = lexeme;
+            // // Get the rest of the line as lexeme (to handle strings with spaces)
+            // getline(iss >> ws, lexeme);
+            // currentNode->lexicalUnit = lexeme;
         }
 
         // Read next line to peek at indentation
@@ -188,7 +193,7 @@ namespace TreeUtils
     }
 
     // Function to print the tree (for verification)
-    void printTree(Node *root, int level = 0)
+    void printTree(Node *root, int level)
     {
         if (root == nullptr)
             return;
@@ -220,20 +225,20 @@ namespace TreeUtils
         {
             if (!child->content.empty())
             {
-                // This is a terminal with line number and lexeme
-                // Split the content to get the parts
-                istringstream iss(child->content);
-                string token, line, lexeme;
-                iss >> token >> line >> lexeme;
+                // // This is a terminal with line number and lexeme
+                // // Split the content to get the parts
+                // istringstream iss(child->content);
+                // string token, line, lexeme;
+                // iss >> token >> line >> lexeme;
 
-                // Print in the format TOKEN(line,lexeme)
-                cout << token << "(" << line << "," << lexeme << ")";
+                // // Print in the format TOKEN(line,lexeme)
+                // cout << token << "(" << line << "," << lexeme << ")";
 
-                // If there are more children after this one, add a space
-                if (child != node->children.back())
-                {
-                    cout << " ";
-                }
+                // // If there are more children after this one, add a space
+                // if (child != node->children.back())
+                // {
+                //     cout << " ";
+                // }
             }
             else
             {
@@ -254,5 +259,3 @@ namespace TreeUtils
 }
 
 using SymbolTableEntry = SymbolTable::Entry;
-
-#pragma endregion Tree
