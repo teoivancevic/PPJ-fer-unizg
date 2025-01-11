@@ -1,5 +1,6 @@
+#pragma once
+
 #include "Types.hpp"
-#include <fstream>
 
 struct SymbolTable
 {
@@ -66,37 +67,43 @@ struct Node;
 namespace TreeUtils
 {
     static Node *buildTree();
-    static string parseNodeName(const string &line);
-    static inline string parseContent(const string &line);
+
+    static pair<int, string> parseContent(const string &line);
+
     static int getIndentationLevel(const string &line);
+
     static void printTree(Node *root, int level = 0);
+
     static void reportError(Node *node);
 }
 
-// Tree node structure
 struct Node
 {
-    string symbol; // Node symbol (A, B, etc.)
+    Node *parent; // Parent node pointer
     vector<Node *> children;
-    Node *parent;   // Parent node pointer
-    string content; // Content within the node (a1xxx, b2yy, etc.)
 
-    // New semantic-related members
-    string type; // For tracking types (int, char, void, etc.)
+    string symbol; // Node symbol (A, B, etc.)
+
     TypeInfo typeInfo;
     bool isLValue; // For l-value checking
 
-    int lineNumber;     // For error reporting
-    string lexicalUnit; // For error reporting
+    string content;
+    int lineNumber; // For error reporting
+    string lexicalUnit;
 
-    int arraySize;             // For array declarations
-    vector<string> paramTypes; // vec u typeinfo
-
-    inline bool isTerminating() { return !(symbol[0] == '<'); }
+    int arraySize; // For array declarations
 
     Node();
 
-    Node(string);
+    Node(string symbol, Node *parent = nullptr) : symbol(symbol), parent(parent) {}
+
+    bool isTerminating() { return !(symbol[0] == '<'); }
+
+    bool isNewScope(Node *node) { return node->symbol == "<slozena_naredba>" ||
+                                         node->symbol == "<definicija_funkcije>"; }
+
+    bool isDeclaration(Node *node) { return node->symbol == "<deklaracija>" ||
+                                            node->symbol == "<definicija_funkcije>"; }
 
     ~Node()
     {
@@ -112,77 +119,41 @@ namespace TreeUtils
     Node *buildTree()
     {
         string line;
-        if (!getline(cin, line))
-            return nullptr;
+        vector<pair<int, Node *>> stack;
 
-        int currentIndentation = getIndentationLevel(line);
-        line = line.substr(currentIndentation);
+        auto [indent, content] = parseContent(line);
+        stack.push_back({indent, new Node(content)});
 
-        if (line.empty() || line[0] == '$')
-            return nullptr;
-
-        Node *currentNode;
-        if (line[0] == '<')
-            // symbol node
-            currentNode = new Node(parseNodeName(line));
-        else
-        { // content node
-          // currentNode = new Node("");
-          // currentNode->content = line;
-
-            // // Parse and set lexical unit if this is a terminal
-            // istringstream iss(line);
-            // string token, line_num, lexeme;
-            // iss >> token;    // Get token type (NIZ_ZNAKOVA, etc)
-            // iss >> line_num; // Get line number
-
-            // // Get the rest of the line as lexeme (to handle strings with spaces)
-            // getline(iss >> ws, lexeme);
-            // currentNode->lexicalUnit = lexeme;
-        }
-
-        // Read next line to peek at indentation
-        string nextLine;
-        while (getline(cin, line))
+        while (getline(cin, line) && !line.empty() && !(line == "$"))
         {
-            int nextIndentation = getIndentationLevel(line);
+            auto [indent, content] = parseContent(line);
+            auto current = stack.back().second;
 
-            // If next line has less or equal indentation, we're done with this node
-            if (nextIndentation <= currentIndentation)
+            if (content[0] != '<')
+                forEachWord(content, [current](const string &item)
+                            { current->children.push_back(new Node(item, current)); });
+
+            else if (indent > stack.back().first)
             {
-                cin.seekg(-line.length() - 1, ios::cur); // Push back the line
-                break;
+                Node *next = new Node(content, current);
+                stack.push_back({indent, next});
+                current->children.push_back(next);
             }
 
-            // Process child node
-            cin.seekg(-line.length() - 1, ios::cur); // Push back the line
-            Node *child = buildTree();
-            if (child != nullptr)
-            {
-                child->parent = currentNode; // Set parent pointer
-                currentNode->children.push_back(child);
-            }
+            while (indent <= stack.back().first)
+                stack.pop_back();
         }
-
-        return currentNode;
+        return stack[0].second;
     }
 
     // Function to parse node name from line (extracts content between < >)
-    string parseNodeName(const string &line)
+    pair<int, string> parseContent(const string &line)
     {
-        if (line[0] == '<')
-        {
-            size_t end = line.find('>');
-            if (end != string::npos)
-                return line.substr(0, end + 1); // Keep the < and >
-        }
-        return "";
-    }
+        int i = 0;
+        while (line[i] == ' ')
+            i++;
 
-    // Function to parse content (everything that's not a node declaration)
-    static inline string parseContent(const string &line)
-    {
-        return line[0] != '<' ? line : "";
+        return {i, line.substr(i, line.size() - i)};
     }
 
     // Function to read indentation level
@@ -194,28 +165,28 @@ namespace TreeUtils
         return spaces;
     }
 
-    // Function to print the tree (for verification)
-    void printTree(Node *root, int level)
-    {
-        if (root == nullptr)
-            return;
+    // // Function to print the tree (for verification)
+    // void printTree(Node *root, int level)
+    // {
+    //     if (root == nullptr)
+    //         return;
 
-        string indent(level, ' ');
+    //     string indent(level, ' ');
 
-        if (!root->content.empty())
-        {
-            cout << indent << root->content << endl;
-        }
-        else
-        {
-            cout << indent << "<" << root->symbol << ">" << endl;
-        }
+    //     if (!root->content.empty())
+    //     {
+    //         cout << indent << root->content << endl;
+    //     }
+    //     else
+    //     {
+    //         cout << indent << "<" << root->symbol << ">" << endl;
+    //     }
 
-        for (Node *child : root->children)
-        {
-            printTree(child, level + 1);
-        }
-    }
+    //     for (Node *child : root->children)
+    //     {
+    //         printTree(child, level + 1);
+    //     }
+    // }
 
     void reportError(Node *node)
     {
@@ -223,41 +194,40 @@ namespace TreeUtils
         cout << node->symbol << " ::= ";
 
         // Then print all child nodes (right side of production)
-        for (Node *child : node->children)
-        {
-            if (!child->content.empty())
-            {
-                // // This is a terminal with line number and lexeme
-                // // Split the content to get the parts
-                // istringstream iss(child->content);
-                // string token, line, lexeme;
-                // iss >> token >> line >> lexeme;
+        // for (Node *child : node->children)
+        // {
+        //     if (!child->content.empty())
+        //     {
+        //         // // This is a terminal with line number and lexeme
+        //         // // Split the content to get the parts
+        //         // istringstream iss(child->content);
+        //         // string token, line, lexeme;
+        //         // iss >> token >> line >> lexeme;
 
-                // // Print in the format TOKEN(line,lexeme)
-                // cout << token << "(" << line << "," << lexeme << ")";
+        //         // // Print in the format TOKEN(line,lexeme)
+        //         // cout << token << "(" << line << "," << lexeme << ")";
 
-                // // If there are more children after this one, add a space
-                // if (child != node->children.back())
-                // {
-                //     cout << " ";
-                // }
-            }
-            else
-            {
-                // This is a non-terminal (has angle brackets)
-                cout << child->symbol;
+        //         // // If there are more children after this one, add a space
+        //         // if (child != node->children.back())
+        //         // {
+        //         //     cout << " ";
+        //         // }
+        //     }
+        //     else
+        //     {
+        //         // This is a non-terminal (has angle brackets)
+        //         cout << child->symbol;
 
-                // If there are more children after this one, add a space
-                if (child != node->children.back())
-                {
-                    cout << " ";
-                }
-            }
-        }
+        //         // If there are more children after this one, add a space
+        //         if (child != node->children.back())
+        //         {
+        //             cout << " ";
+        //         }
+        //     }
+        // }
         cout << endl;
         exit(0);
     }
-
 }
 
 using SymbolTableEntry = SymbolTable::Entry;

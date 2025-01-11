@@ -1,3 +1,5 @@
+#pragma once
+
 #include "utils.hpp"
 
 namespace Constants
@@ -7,17 +9,17 @@ namespace Constants
     const int MIN_CHAR = 0;
     const int MAX_CHAR = 255;
 
-    bool isValidNumConstant(int value)
+    static bool isValidNumConstant(int value)
     {
         return value >= MIN_INT && value <= MAX_INT;
     }
 
-    bool isValidNumConstant(char value)
+    static bool isValidNumConstant(char value)
     {
         return value >= MIN_CHAR && value <= MAX_CHAR;
     }
 
-    bool isValidEscapeSequence(char c)
+    static bool isValidEscapeSequence(char c)
     {
         return c == 't' || c == 'n' || c == '0' ||
                c == '\'' || c == '\"' || c == '\\';
@@ -126,8 +128,6 @@ public:
         return *this;
     }
 };
-
-const TypeInfo TypeInfo::VOID = TypeInfo(BasicType::VOID);
 
 namespace TypeUtils
 {

@@ -1,10 +1,13 @@
-#include "semantickiAnalizator.cpp"
+#include "SemanticAnalyzer.hpp"
 
 using namespace TreeUtils;
 
 // <prijevodna_jedinica> ::= <vanjska_deklaracija>
 // <prijevodna_jedinica> ::= <prijevodna_jedinica> <vanjska_deklaracija>
 void SemanticAnalyzer::NaredbaProcessor::process_prijevodna_jedinica(Node *node) { processAll(node); }
+
+// <vanjska_deklaracija> ::= <definicija_funkcije> | <deklaracija>
+void SemanticAnalyzer::NaredbaProcessor::process_vanjska_deklaracija(Node *node) { processAll(node); }
 
 // <slozena_naredba> ::= L_VIT_ZAGRADA <lista_naredbi> D_VIT_ZAGRADA
 // <slozena_naredba> ::= L_VIT_ZAGRADA <lista_deklaracija> <lista_naredbi> D_VIT_ZAGRADA

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Data.hpp"
 
 class SemanticAnalyzer
@@ -6,15 +8,14 @@ private:
     class Validator
     {
     public:
-        static bool validateNumConstant(const string &lexeme, TypeInfo &outType)
+        static bool validateNumConstant(const string &unit, TypeInfo &outType)
         {
             try
             {
-                int value = stoi(lexeme);
+                int value = stoi(unit);
                 if (!Constants::isValidNumConstant(value))
-                {
                     return false;
-                }
+
                 outType = TypeInfo(BasicType::INT);
                 return true;
             }
@@ -43,23 +44,23 @@ private:
             return true;
         }
 
-        static bool validateNizZnakova(const string &lexeme, TypeInfo &outType)
+        static bool validateNizZnakova(const string &unit, TypeInfo &outType)
         {
-            for (size_t i = 0; i < lexeme.length(); i++)
+            for (size_t i = 0; i < unit.length(); i++)
             {
-                if (lexeme[i] == '\\')
+                if (unit[i] == '\\')
                 {
-                    if (i + 1 >= lexeme.length())
+                    if (i + 1 >= unit.length())
                     {
                         return false;
                     }
-                    if (!Constants::isValidEscapeSequence(lexeme[i + 1]))
+                    if (!Constants::isValidEscapeSequence(unit[i + 1]))
                     {
                         return false;
                     }
                     i++;
                 }
-                else if (!Constants::isValidNumConstant(static_cast<int>(lexeme[i])))
+                else if (!Constants::isValidNumConstant(static_cast<int>(unit[i])))
                 {
                     return false;
                 }
@@ -128,6 +129,7 @@ private:
         void process_naredba_petlje(Node *node);
         void process_naredba_skoka(Node *node);
         void process_prijevodna_jedinica(Node *node);
+        void process_vanjska_deklaracija(Node *node);
     };
 
     // Za obradu deklaracija i definicija (4.4.6)
@@ -145,7 +147,6 @@ private:
         void process_init_deklarator(Node *node);
         void process_izravni_deklarator(Node *node);
         void process_inicijalizator(Node *node);
-        void process_vanjska_deklaracija(Node *node);
     };
 
     Node *root;
@@ -156,16 +157,17 @@ private:
     DeklaracijaProcessor deklaracijaProcessor;
 
 public:
-    SemanticAnalyzer(Node *rootNode) : root(rootNode),
-                                       currentScope(new SymbolTable()),
-                                       izrazProcessor(this),
-                                       naredbaProcessor(this),
-                                       deklaracijaProcessor(this) {}
+    SemanticAnalyzer(Node *rootNode)
+        : root(rootNode),
+          currentScope(new SymbolTable()),
+          izrazProcessor(this),
+          naredbaProcessor(this),
+          deklaracijaProcessor(this) {}
 
-    void analyze()
+    void run()
     {
-        // 1. First Pass - Build Symbol Tables
-        buildSymbolTables(root);
+        // 1. First Pass - Build Symbol Tables - Ovo bi se trebalo dogoditi tjekom izvođenja
+        // buildSymbolTables(root);
 
         // 2. Perform semantic analysis
         process(root);
@@ -175,77 +177,61 @@ public:
         checkAllFunctionsDefined();
     }
 
+    // aka provjeri
     void process(Node *node);
 
 private:
-    void buildSymbolTables(Node *node)
-    {
-        if (!node)
-            return;
+    // void buildSymbolTables(Node *node)
+    // {
+    //     // Create new scope for functions and blocks
+    //     if (isNewScope(node))
+    //     {
+    //         SymbolTable *newScope = new SymbolTable(currentScope);
+    //         currentScope = newScope;
+    //     }
 
-        // Create new scope for functions and blocks
-        if (isNewScope(node))
-        {
-            SymbolTable *newScope = new SymbolTable(currentScope);
-            currentScope = newScope;
-        }
+    //     // Record declarations
+    //     if (isDeclaration(node))
+    //     {
+    //         recordDeclaration(node);
+    //     }
 
-        // Record declarations
-        if (isDeclaration(node))
-        {
-            recordDeclaration(node);
-        }
+    //     // Recurse on children
+    //     for (Node *child : node->children)
+    //         buildSymbolTables(child);
 
-        // Recurse on children
-        for (Node *child : node->children)
-        {
-            buildSymbolTables(child);
-        }
+    //     // Restore previous scope
+    //     if (isNewScope(node))
+    //     {
+    //         currentScope = currentScope->parent;
+    //     }
+    // }
 
-        // Restore previous scope
-        if (isNewScope(node))
-        {
-            currentScope = currentScope->parent;
-        }
-    }
+    // void recordDeclaration(Node *node)
+    // {
+    //     // Record the declaration in current symbol table
+    //     if (node->symbol == "<deklaracija>")
+    //     {
+    //         // Handle variable declaration
+    //         SymbolTableEntry entry;
+    //         // Fill in entry details based on node...
+    //         currentScope->insert(node->content, entry);
+    //     }
+    //     else if (node->symbol == "<definicija_funkcije>")
+    //     {
+    //         // Handle function definition
+    //         SymbolTableEntry entry;
+    //         entry.isFunction = true;
+    //         // Fill in other entry details...
+    //         currentScope->insert(node->content, entry);
+    //     }
+    // }
 
-    bool isNewScope(Node *node)
-    {
-        return node->symbol == "<slozena_naredba>" ||
-               node->symbol == "<definicija_funkcije>";
-    }
-
-    bool isDeclaration(Node *node)
-    {
-        return node->symbol == "<deklaracija>" ||
-               node->symbol == "<definicija_funkcije>";
-    }
-
-    void recordDeclaration(Node *node)
-    {
-        // Record the declaration in current symbol table
-        if (node->symbol == "<deklaracija>")
-        {
-            // Handle variable declaration
-            SymbolTableEntry entry;
-            // Fill in entry details based on node...
-            currentScope->insert(node->content, entry);
-        }
-        else if (node->symbol == "<definicija_funkcije>")
-        {
-            // Handle function definition
-            SymbolTableEntry entry;
-            entry.isFunction = true;
-            // Fill in other entry details...
-            currentScope->insert(node->content, entry);
-        }
-    }
-
-    void checkAssignment(Node *node)
-    {
-        // Check assignment expression
-        // Implement type checking and other semantic rules
-    }
+    // void checkAssignment(Node *node)
+    // {
+    //     // Check assignment expression
+    //     // Implement type checking and other semantic rules
+    // }
 
     void checkMainExists()
     {
@@ -383,11 +369,11 @@ void SemanticAnalyzer::process(Node *node)
     {
         naredbaProcessor.process_naredba_skoka(node);
     }
-
     else if (node->symbol == "<vanjska_deklaracija>")
     {
-        deklaracijaProcessor.process_vanjska_deklaracija(node);
+        naredbaProcessor.process_vanjska_deklaracija(node);
     }
+
     else if (node->symbol == "<definicija_funkcije>")
     {
         deklaracijaProcessor.process_definicija_funkcije(node);
@@ -408,25 +394,4 @@ void SemanticAnalyzer::process(Node *node)
     {
         deklaracijaProcessor.process_deklaracija(node);
     }
-}
-
-int main()
-{
-    Node *root = TreeUtils::buildTree();
-
-    // Print the tree to verify the structure
-    if (root != nullptr)
-    {
-        // cout << "\nConstructed Tree:\n";
-        // printTree(root);
-
-        // Create and run semantic analyzer
-        SemanticAnalyzer analyzer(root);
-        analyzer.analyze();
-
-        // Clean up
-        delete root;
-    }
-
-    return 0;
 }
