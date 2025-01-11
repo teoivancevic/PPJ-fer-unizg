@@ -101,14 +101,11 @@ struct Node
 
 namespace TreeUtils
 {
-#define INPUT (input == "std::cin" ? cin : file)
 
-    Node *buildTree(string input = "std::cin")
+    Node *buildTree()
     {
-        ifstream file(input);
-
         string line;
-        if (!getline(INPUT, line))
+        if (!getline(cin, line))
             return nullptr;
 
         int currentIndentation = getIndentationLevel(line);
@@ -139,7 +136,7 @@ namespace TreeUtils
 
         // Read next line to peek at indentation
         string nextLine;
-        while (getline(INPUT, line))
+        while (getline(cin, line))
         {
             int nextIndentation = getIndentationLevel(line);
 
@@ -159,8 +156,6 @@ namespace TreeUtils
                 currentNode->children.push_back(child);
             }
         }
-
-        file.close();
 
         return currentNode;
     }

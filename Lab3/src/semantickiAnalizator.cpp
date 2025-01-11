@@ -265,7 +265,7 @@ void SemanticAnalyzer::semanticAnalysis(Node *node)
 
     else if (node->symbol == "<vanjska_deklaracija>")
     {
-        naredbaProcessor.process_vanjska_deklaracija(node);
+        deklaracijaProcessor.process_vanjska_deklaracija(node);
     }
     else if (node->symbol == "<definicija_funkcije>")
     {

@@ -120,7 +120,6 @@ public:
     void process_naredba_petlje(Node *node);
     void process_naredba_skoka(Node *node);
     void process_prijevodna_jedinica(Node *node);
-    void process_vanjska_deklaracija(Node *node);
 };
 
 // Za obradu deklaracija i definicija (4.4.6)
@@ -138,4 +137,5 @@ public:
     void process_init_deklarator(Node *node);
     void process_izravni_deklarator(Node *node);
     void process_inicijalizator(Node *node);
+    void process_vanjska_deklaracija(Node *node);
 };
