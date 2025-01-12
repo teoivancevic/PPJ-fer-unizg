@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "preLaunchTask": "build Sem",
-            "program": "${workspaceFolder}/GEN",
+            "program": "${workspaceFolder}/SM",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

@@ -69,7 +69,7 @@ struct Node
     bool isLValue; // For l-value checking
 
     string content;
-    int lineNumber; // For error reporting
+    string lineNumber; // For error reporting
     string lexicalUnit;
 
     int arraySize; // For array declarations
@@ -77,7 +77,15 @@ struct Node
     Node();
 
     Node(string symbol, Node *parent = nullptr, string content = "")
-        : symbol(symbol), parent(parent), content(content) {}
+        : symbol(symbol), parent(parent), content(content)
+    {
+        if (content != "")
+        {
+            this->symbol = consumeNextWord(content);
+            this->lineNumber = consumeNextWord(content);
+            this->lexicalUnit = consumeNextWord(content);
+        }
+    }
 
     bool isTerminating() { return !(symbol[0] == '<'); }
 
@@ -101,6 +109,8 @@ namespace TreeUtils
     Node *buildTree()
     {
         string line;
+        getline(cin, line);
+
         vector<pair<int, Node *>> stack;
 
         auto [indent, content] = parseContent(line);
@@ -109,13 +119,14 @@ namespace TreeUtils
         while (getline(cin, line) && !line.empty() && !(line == "$"))
         {
             auto [indent, content] = parseContent(line);
-            auto current = stack.back().second;
 
             while (indent <= stack.back().first)
                 stack.pop_back();
 
+            auto current = stack.back().second;
+
             if (content[0] != '<')
-                current->children.push_back(new Node(readNextWord(content), current, content));
+                current->children.push_back(new Node("", current, content));
 
             else if (indent > stack.back().first)
             {
@@ -127,7 +138,7 @@ namespace TreeUtils
         return stack[0].second;
     }
 
-    // Function to parse node name from line (extracts content between < >)
+    // Function to parse node name and indent number from line
     pair<int, string> parseContent(const string &line)
     {
         int i = 0;
@@ -148,41 +159,19 @@ namespace TreeUtils
 
     void reportError(Node *node)
     {
-        // First print the non-terminal (left side of production)
         cout << node->symbol << " ::= ";
 
-        // Then print all child nodes(right side of production)
         for (Node *child : node->children)
         {
-            if (!child->content.empty())
-            {
-                // // This is a terminal with line number and lexeme
-                // // Split the content to get the parts
-                // istringstream iss(child->content);
-                // string token, line, lexeme;
-                // iss >> token >> line >> lexeme;
+            cout << child->symbol;
 
-                // // Print in the format TOKEN(line,lexeme)
-                // cout << token << "(" << line << "," << lexeme << ")";
+            if (child->isTerminating())
+                cout << "(" << child->lineNumber << "," << child->lexicalUnit << ")";
 
-                // // If there are more children after this one, add a space
-                // if (child != node->children.back())
-                // {
-                //     cout << " ";
-                // }
-            }
-            else
-            {
-                // This is a non-terminal (has angle brackets)
-                cout << child->symbol;
-
-                // If there are more children after this one, add a space
-                if (child != node->children.back())
-                {
-                    cout << " ";
-                }
-            }
+            if (child != node->children.back())
+                cout << " ";
         }
+
         cout << endl;
         exit(0);
     }
