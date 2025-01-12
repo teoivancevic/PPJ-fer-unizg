@@ -6,12 +6,12 @@ void SemanticAnalyzer::IzrazProcessor::process_primarni_izraz(Node *node)
 {
     cerr << "DEBUG: Entering process_primarni_izraz\n";
 
-    if (!node || (node->children.size() != 1 && node->children.size() != 3))
-    {
-        cerr << "DEBUG: Invalid node structure in process_primarni_izraz\n";
-        reportError(node);
-        return;
-    }
+    // if (!node || (node->children.size() != 1 && node->children.size() != 3))
+    // {
+    //     cerr << "DEBUG: Invalid node structure in process_primarni_izraz\n";
+    //     reportError(node);
+    //     return;
+    // }
 
     // Handle parenthesized expression
     if (node->children.size() == 3)
@@ -46,12 +46,12 @@ void SemanticAnalyzer::IzrazProcessor::process_primarni_izraz(Node *node)
             return;
         }
 
-        if (entry->type.isFunc())
-        {
-            cerr << "DEBUG: Identifier is a function, not allowed here\n";
-            reportError(node);
-            return;
-        }
+        // if (entry->type.isFunc())
+        // {
+        //     cerr << "DEBUG: Identifier is a function, not allowed here\n";
+        //     reportError(node);
+        //     return;
+        // }
 
         // Set type and l-value status for identifier
         node->typeInfo = entry->type;
@@ -98,8 +98,8 @@ void SemanticAnalyzer::IzrazProcessor::process_primarni_izraz(Node *node)
         return;
     }
 
-    cerr << "DEBUG: Unknown primary expression\n";
-    reportError(node);
+    // cerr << "DEBUG: Unknown primary expression\n";
+    // reportError(node);
 }
 
 

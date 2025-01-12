@@ -5,9 +5,13 @@ using namespace TypeUtils;
 
 void SemanticAnalyzer::DeklaracijaProcessor::process_definicija_funkcije(Node *node)
 {
-    // Get function name and return type
-    string funcName = node->children[1]->content;      // IDN node
-    TypeInfo returnType = node->children[0]->typeInfo; // <ime_tipa> node
+    // Extract actual identifier name from IDN node
+    string funcName = node->children[1]->lexicalUnit;
+    string actualName = extractIdentifier(funcName);
+
+    // Process return type from <ime_tipa> node
+    //process_ime_tipa(node->children[0]);
+    TypeInfo returnType = node->children[0]->typeInfo;
 
     // Check return type isn't const-qualified
     if (returnType.isConst())
@@ -16,37 +20,69 @@ void SemanticAnalyzer::DeklaracijaProcessor::process_definicija_funkcije(Node *n
     }
 
     // Look up any previous declarations
-    auto *existingFunc = currentScope->lookup(funcName);
+    auto *existingFunc = currentScope->lookup(actualName);
     if (existingFunc && existingFunc->isDefined)
     {
         reportError(node); // Function already defined
     }
 
-    // Create function entry
-    SymbolTableEntry funcEntry;
-    funcEntry.name = funcName;
-    funcEntry.isDefined = true;
-    funcEntry.type.returnType = returnType.baseType;
-
-    // Process parameters if present
-    if (node->children.size() > 4 && node->children[3]->symbol == "<lista_parametara>")
+    // Create function type info
+    TypeInfo functionType;
+    functionType.baseType = returnType.baseType;
+    
+    // Handle parameters
+    if (node->children[3]->content.find("KR_VOID") == 0)
     {
+        // Function with void parameters
+        functionType = TypeUtils::makeFunctionType(returnType.baseType, {TypeInfo::VOID});
+    }
+    else if (node->children[3]->symbol == "<lista_parametara>")
+    {
+        // Process parameter list
         process_lista_parametara(node->children[3]);
-        funcEntry.type.functionParams = node->children[3]->typeInfo.getFunctionParams();
+        functionType = TypeUtils::makeFunctionType(
+            returnType.baseType,
+            node->children[3]->typeInfo.getFunctionParams()
+        );
     }
 
     // Verify against previous declaration if exists
     if (existingFunc)
     {
-        if (existingFunc->type != funcEntry.type ||
-            existingFunc->type.functionParams != funcEntry.type.functionParams)
+        if (existingFunc->type != functionType)
+        {
+            reportError(node);
+        }
+        // Update existing entry to mark as defined
+        existingFunc->isDefined = true;
+    }
+    else
+    {
+        // Create new function entry
+        SymbolTableEntry funcEntry;
+        funcEntry.name = actualName;
+        funcEntry.type = functionType;
+        funcEntry.isDefined = true;
+        
+        // Add to symbol table
+        if (!currentScope->insert(actualName, funcEntry))
         {
             reportError(node);
         }
     }
 
-    // Add to symbol table
-    currentScope->insert(funcName, funcEntry);
+    // Store function return type for use in return statement validation
+    node->typeInfo = returnType;
+
+    // Create new scope for function body
+    auto prevScope = currentScope;
+    currentScope = currentScope->createChildScope();
+
+    // If we have parameters, add them to the new scope
+    if (node->children[3]->symbol == "<lista_parametara>")
+    {
+        process_lista_parametara(node->children[3]);
+    }
 
     // Process function body
     if (node->children.back()->symbol == "<slozena_naredba>")
@@ -54,6 +90,9 @@ void SemanticAnalyzer::DeklaracijaProcessor::process_definicija_funkcije(Node *n
         NaredbaProcessor naredbaProcessor(SA);
         naredbaProcessor.process_slozena_naredba(node->children.back());
     }
+
+    // Restore previous scope
+    currentScope = prevScope;
 }
 
 void SemanticAnalyzer::DeklaracijaProcessor::process_lista_parametara(Node *node)
@@ -357,6 +396,10 @@ void SemanticAnalyzer::DeklaracijaProcessor::process_izravni_deklarator(Node *no
     }
     // <izravni_deklarator> ::= IDN L_ZAGRADA KR_VOID D_ZAGRADA
     else if (node->children.size() == 4 && node->children[1]->content.find("L_ZAGRADA") == 0) {
+        
+        // Extract just the identifier name from "IDN 2 f" format
+        string actualName = name.substr(name.find_last_of(' ') + 1);
+        
         // Check for previous declaration in local scope
         auto* existing = currentScope->lookup(name);
         if (existing) {
@@ -397,6 +440,7 @@ void SemanticAnalyzer::DeklaracijaProcessor::process_izravni_deklarator(Node *no
                 node->typeInfo.getBaseType(),
                 node->children[2]->typeInfo.getFunctionParams()
             );
+            entry.isDefined = false;  // Explicitly mark as not defined
             currentScope->insert(name, entry);
         }
     } else {

@@ -135,6 +135,17 @@ private:
     // Za obradu deklaracija i definicija (4.4.6)
     class DeklaracijaProcessor : Processor
     {
+    private:
+        static string extractIdentifier(const string& name) {
+            if (name.find("IDN") == 0) {
+                string temp = name;
+                consumeNextWord(temp);  // Skip "IDN"
+                consumeNextWord(temp);  // Skip line number
+                return consumeNextWord(temp);  // Return actual identifier
+            }
+            return name;
+        }
+
     public:
         using Processor::Processor;
 
@@ -148,6 +159,9 @@ private:
         void process_izravni_deklarator(Node *node);
         void process_inicijalizator(Node *node);
         void process_lista_izraza_pridruzivanja(Node* node);
+
+
+        
     };
 
     Node *root;
@@ -329,11 +343,9 @@ private:
 
     void checkAllFunctionsDefined()
     {
-        for (const auto &[name, symbol] : currentScope->symbols)
-        {
-            if (symbol.type.isFunc() && !symbol.isDefined)
-            {
-                cout << name << endl;
+        for (const auto& [name, symbol] : currentScope->symbols) {
+            if (symbol.type.isFunc() && !symbol.isDefined) {
+                cout << "funkcija" << endl;
                 exit(0);
             }
         }

@@ -4,6 +4,18 @@
 
 struct SymbolTable
 {
+private:
+    static string extractIdentifier(const string& name) {
+        if (name.find("IDN") == 0) {
+            string temp = name;
+            consumeNextWord(temp);  // Skip "IDN"
+            consumeNextWord(temp);  // Skip line number
+            return consumeNextWord(temp);  // Return actual identifier
+        }
+        return name;
+    }
+
+public:
     struct Entry
     {
         TypeInfo type;
@@ -18,24 +30,26 @@ struct SymbolTable
     // Constructor
     SymbolTable(SymbolTable *parentScope = nullptr) : parent(parentScope) {}
 
-    bool insert(const string &name, const Entry &entry)
-    {
+   bool insert(const string &name, const Entry &entry) {
+        string identifier = extractIdentifier(name);
+        
         // Check if symbol already exists in current scope
-        if (exists(symbols, name))
+        if (exists(symbols, identifier))
             return false;
-        symbols.insert({name, entry});
+        symbols.insert({identifier, entry});
         return true;
     }
 
-    Entry *lookup(const string &name)
-    {
+    Entry *lookup(const string &name) {
+        string identifier = extractIdentifier(name);
+        
         // Look in current scope
-        if (exists(symbols, name))
-            return &symbols.at(name);
+        if (exists(symbols, identifier))
+            return &symbols.at(identifier);
 
         // If not found and we have a parent scope, look there
         if (parent != nullptr)
-            return parent->lookup(name);
+            return parent->lookup(identifier);
 
         return nullptr; // Not found in any scope
     }
@@ -69,7 +83,7 @@ struct Node
     bool isLValue; // For l-value checking
 
     string content;
-    string lineNumber; // For error reporting
+    string lineNumber; // For error reporting 
     string lexicalUnit;
 
     int arraySize; // For array declarations

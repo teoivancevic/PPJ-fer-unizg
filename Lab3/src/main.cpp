@@ -13,7 +13,7 @@ int main()
 {
     Node *root = TreeUtils::buildTree();
 
-    // printTree(root);
+    //printTree(root);
 
     SemanticAnalyzer(root).run();
 
