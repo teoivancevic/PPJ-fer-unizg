@@ -423,6 +423,7 @@ void SemanticAnalyzer::IzrazProcessor::process_ime_tipa(Node *node)
     // <ime_tipa> ::= <specifikator_tipa>
     if (node->children.size() == 1)
     {
+        cerr << "DEBUG: Processing single child specifikator_tipa" << endl;
         process_specifikator_tipa(node->children[0]);
         node->typeInfo = node->children[0]->typeInfo;
         cerr << "DEBUG: ime_tipa type set to: " << node->typeInfo.toString() << endl;
@@ -457,34 +458,35 @@ void SemanticAnalyzer::IzrazProcessor::process_ime_tipa(Node *node)
 
 void SemanticAnalyzer::IzrazProcessor::process_specifikator_tipa(Node *node)
 {
-    if (!node || node->children.size() != 1)
-    {
-        reportError(node);
-        return;
-    }
+    cerr << "DEBUG: Processing specifikator_tipa node" << endl;
+
 
     string typeSpecifier = node->children[0]->content;
+    cerr << "DEBUG: Type specifier content: " << typeSpecifier << endl;
 
     // <specifikator_tipa> ::= KR_VOID
     if (typeSpecifier.find("KR_VOID") == 0)
     {
         node->typeInfo = TypeInfo(BasicType::VOID);
-        return;
+        cerr << "DEBUG: Set type to VOID" << endl;
     }
     // <specifikator_tipa> ::= KR_CHAR
     else if (typeSpecifier.find("KR_CHAR") == 0)
     {
         node->typeInfo = TypeInfo(BasicType::CHAR);
-        return;
+        cerr << "DEBUG: Set type to CHAR" << endl;
     }
     // <specifikator_tipa> ::= KR_INT
     else if (typeSpecifier.find("KR_INT") == 0)
     {
         node->typeInfo = TypeInfo(BasicType::INT);
-        return;
+        cerr << "DEBUG: Set type to INT" << endl;
     }
-
-    reportError(node);
+    else
+    {
+        cerr << "DEBUG: Unknown type specifier" << endl;
+        reportError(node);
+    }
 }
 
 void SemanticAnalyzer::IzrazProcessor::process_multiplikativni_izraz(Node *node)

@@ -192,29 +192,56 @@ namespace TypeUtils
         return type.isArray();
     }
 
-    static bool areTypesCompatible(const TypeInfo &source, const TypeInfo &target)
+    static bool areTypesCompatible(const TypeInfo &source, const TypeInfo &target) 
     {
-        // Same types always compatible
+        // Same types are always compatible
         if (source == target)
             return true;
 
-        // Handle void, Array discrepancy and Functions
-        if (source.isVoid() || target.isVoid() ||
-            source.isArray() != target.isArray() ||
-            source.isFunc() || target.isFunc())
+        // Handle case where either type is void
+        if (source.isVoid() || target.isVoid())
             return false;
 
-        // Handle const relationships for arrays and vars
-        if (source.getBaseType() == target.getBaseType())
-            return !source.isConst();
+        // Handle functions - we can't convert functions
+        if (source.isFunc() || target.isFunc())
+            return false;
 
-        // Handle char -> int conversion
-        if (source.getBaseType() == BasicType::CHAR &&
-            target.getBaseType() == BasicType::INT &&
-            !source.isArray() && !source.isConst() && !target.isConst())
+        // Handle arrays - they must either be the same type or follow rule #4
+        if (source.isArray() && target.isArray()) {
+            // Base types must match
+            if (source.getBaseType() != target.getBaseType())
+                return false;
+                
+            // Rule #4: array(T) can convert to array(const(T)) 
+            // But array(const(T)) cannot convert to array(T)
+            if (!source.isConst() && target.isConst())
+                return true;
+                
+            // Otherwise arrays must be exactly the same type
+            return source.isConst() == target.isConst();
+        }
+
+        // Arrays cannot convert to non-arrays and vice versa
+        if (source.isArray() != target.isArray())
+            return false;
+
+        // Handle numeric types and their conversions
+        
+        // Rule #3: char can convert to int
+        if (source.getBaseType() == BasicType::CHAR && 
+            target.getBaseType() == BasicType::INT)
             return true;
 
-        // Everything else is incompatible
+        // Rules #1 and #2: const conversions for same base type
+        if (source.getBaseType() == target.getBaseType()) {
+            // Rule #1: const(T) -> T
+            if (source.isConst() && !target.isConst())
+                return true;
+            // Rule #2: T -> const(T)  
+            if (!source.isConst() && target.isConst())
+                return true;
+        }
+
         return false;
     }
 

@@ -1,0 +1,25 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "LLDB: Debug",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/semAnalizator",  // Changed path
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/src",  // Changed working directory
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb",
+            "preLaunchTask": "C/C++: g++ build active file",
+            "targetArchitecture": "arm64",
+            "setupCommands": [
+                {
+                    "text": "settings set target.input-path ${workspaceFolder}/test/07_nedef_fun/test.in",  // Updated path
+                    "description": "Set input file"
+                }
+            ]
+        }
+    ]
+}

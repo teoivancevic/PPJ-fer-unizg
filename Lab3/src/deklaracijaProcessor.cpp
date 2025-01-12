@@ -6,12 +6,27 @@ using namespace TypeUtils;
 void SemanticAnalyzer::DeklaracijaProcessor::process_definicija_funkcije(Node *node)
 {
     // Extract actual identifier name from IDN node
+    cerr << "DEBUG: Processing function definition" << endl;
+    
+    // Process return type
+    cerr << "DEBUG: Processing function return type" << endl;
+    SA->izrazProcessor.process_ime_tipa(node->children[0]);
+    TypeInfo returnType = node->children[0]->typeInfo;
+    cerr << "DEBUG: Function return type is: " << returnType.toString() << endl;
+    
+    // Extract actual identifier name from IDN node
     string funcName = node->children[1]->lexicalUnit;
+    cerr << "DEBUG: Function name is: " << funcName << endl;
+
+    // Store return type in the node itself
+    node->typeInfo = returnType;
+
+
     string actualName = extractIdentifier(funcName);
 
     // Process return type from <ime_tipa> node
     //process_ime_tipa(node->children[0]);
-    TypeInfo returnType = node->children[0]->typeInfo;
+    // TypeInfo returnType = node->children[0]->typeInfo;
 
     // Check return type isn't const-qualified
     if (returnType.isConst())
@@ -396,26 +411,30 @@ void SemanticAnalyzer::DeklaracijaProcessor::process_izravni_deklarator(Node *no
     }
     // <izravni_deklarator> ::= IDN L_ZAGRADA KR_VOID D_ZAGRADA
     else if (node->children.size() == 4 && node->children[1]->content.find("L_ZAGRADA") == 0) {
+        string name = extractIdentifier(node->children[0]->lexicalUnit);
+        cerr << "DEBUG: Adding function declaration for " << name << endl;
         
-        // Extract just the identifier name from "IDN 2 f" format
-        string actualName = name.substr(name.find_last_of(' ') + 1);
+        // Create function type with void parameter
+        TypeInfo funcType = TypeUtils::makeFunctionType(
+            node->typeInfo.getBaseType(),
+            {TypeInfo::VOID}
+        );
         
-        // Check for previous declaration in local scope
-        auto* existing = currentScope->lookup(name);
-        if (existing) {
-            // Verify type matches if already declared
-            TypeInfo funcType = TypeUtils::makeFunctionType(node->typeInfo.getBaseType(), {TypeInfo::VOID});
-            if (existing->type != funcType) {
-                reportError(node);
-                return;
-            }
-        } else {
-            // Add new function declaration
-            SymbolTableEntry entry;
-            entry.name = name;
-            entry.type = TypeUtils::makeFunctionType(node->typeInfo.getBaseType(), {TypeInfo::VOID});
-            currentScope->insert(name, entry);
+        // Find the global scope
+        SymbolTable* globalScope = currentScope;
+        while (globalScope->parent != nullptr) {
+            globalScope = globalScope->parent;
         }
+        
+        // Add to global symbol table instead of current scope
+        SymbolTableEntry entry;
+        entry.name = name;
+        entry.type = funcType;
+        entry.isDefined = false;
+        
+        bool inserted = globalScope->insert(name, entry);
+        cerr << "DEBUG: Function " << name << " isDefined=" << entry.isDefined 
+            << " in global scope" << endl;
     }
     // <izravni_deklarator> ::= IDN L_ZAGRADA <lista_parametara> D_ZAGRADA
     else if (node->children.size() == 4) {

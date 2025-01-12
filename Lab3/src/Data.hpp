@@ -30,13 +30,20 @@ public:
     // Constructor
     SymbolTable(SymbolTable *parentScope = nullptr) : parent(parentScope) {}
 
-   bool insert(const string &name, const Entry &entry) {
+    bool insert(const string &name, const Entry &entry) {
         string identifier = extractIdentifier(name);
         
         // Check if symbol already exists in current scope
-        if (exists(symbols, identifier))
+        if (exists(symbols, identifier)) {
+            // If it exists but isn't defined, allow update
+            if (!symbols[identifier].isDefined) {
+                symbols[identifier] = entry;
+                return true;
+            }
             return false;
+        }
         symbols.insert({identifier, entry});
+        cerr << "DEBUG: Inserted " << identifier << " into symbol table" << endl;
         return true;
     }
 

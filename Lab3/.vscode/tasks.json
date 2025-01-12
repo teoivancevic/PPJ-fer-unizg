@@ -1,0 +1,27 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "cppbuild",
+            "label": "C/C++: g++ build active file",
+            "command": "/usr/bin/g++",
+            "args": [
+                "-g",
+                "src/*.cpp",  // Changed to include src folder
+                "-std=c++17",
+                "-o",
+                "${workspaceFolder}/src/semAnalizator"  // Changed path
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/src"  // Changed working directory
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}

@@ -90,17 +90,33 @@ void SemanticAnalyzer::NaredbaProcessor::process_naredba_skoka(Node *node)
         if (!current)
             return reportError(node);
 
-        TypeInfo returnType; // VOID
-        if (node->children.size() == 3)
-        {
-            // Process the return expression
-            SA->izrazProcessor.process_izraz(node->children[1]);
-            returnType = node->children[1]->typeInfo;
-        }
+        // // Get function's return type
+        // TypeInfo functionReturnType = current->typeInfo;
+        // Get function's return type from the <ime_tipa> node
+        TypeInfo functionReturnType = current->children[0]->typeInfo;  // FIXED: Get from ime_tipa node
 
-        // check returnType compatibility
-        if (!returnType.canImplicitlyConvertTo(current->typeInfo.getReturnType()))
-            return reportError(node);
+        // Process return value if present
+        if (node->children.size() == 3) // Has return expression
+        {
+            SA->izrazProcessor.process_izraz(node->children[1]);
+            TypeInfo returnType = node->children[1]->typeInfo;
+            
+            // Check return type compatibility
+            if (!returnType.canImplicitlyConvertTo(functionReturnType))
+            {
+                reportError(node);
+                return;
+            }
+        }
+        else // void return
+        {
+            // Check if function is declared as void
+            if (functionReturnType.getBaseType() != BasicType::VOID)
+            {
+                reportError(node);
+                return;
+            }
+        }
     }
 }
 

@@ -184,8 +184,9 @@ public:
         process(root);
 
         // Final checks
-        checkMainExists();
         checkAllFunctionsDefined();
+        checkMainExists();
+        
     }
 
     // aka provjeri
@@ -343,11 +344,28 @@ private:
 
     void checkAllFunctionsDefined()
     {
+        cerr << "DEBUG: Checking all functions defined" << endl;
+        bool foundUndefined = false;
+        
+        cerr << "DEBUG: Total symbols in global scope: " 
+            << currentScope->symbols.size() << endl;
+        
+        // Check ALL functions before deciding
         for (const auto& [name, symbol] : currentScope->symbols) {
+            cerr << "DEBUG: Checking function " << name 
+                << ", isFunc=" << symbol.type.isFunc()
+                << ", isDefined=" << symbol.isDefined << endl;
+            
             if (symbol.type.isFunc() && !symbol.isDefined) {
-                cout << "funkcija" << endl;
-                exit(0);
+                foundUndefined = true;
+                cerr << "DEBUG: Found undefined function " << name << endl;
+                break;
             }
+        }
+        
+        if (foundUndefined) {
+            cout << "funkcija" << endl;
+            exit(0);
         }
     }
 };
