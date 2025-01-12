@@ -4,8 +4,11 @@ using namespace TreeUtils;
 
 void SemanticAnalyzer::IzrazProcessor::process_primarni_izraz(Node *node)
 {
+    cerr << "DEBUG: Entering process_primarni_izraz\n";
+
     if (!node || (node->children.size() != 1 && node->children.size() != 3))
     {
+        cerr << "DEBUG: Invalid node structure in process_primarni_izraz\n";
         reportError(node);
         return;
     }
@@ -16,11 +19,13 @@ void SemanticAnalyzer::IzrazProcessor::process_primarni_izraz(Node *node)
         if (node->children[0]->content.find("L_ZAGRADA") == 0 &&
             node->children[2]->content.find("D_ZAGRADA") == 0)
         {
+            cerr << "DEBUG: Parenthesized expression detected\n";
             process_izraz(node->children[1]);
             node->typeInfo = node->children[1]->typeInfo;
             node->isLValue = node->children[1]->isLValue;
             return;
         }
+        cerr << "DEBUG: Invalid parenthesized expression\n";
         reportError(node);
         return;
     }
@@ -31,23 +36,37 @@ void SemanticAnalyzer::IzrazProcessor::process_primarni_izraz(Node *node)
     // Handle identifier - validate existence immediately
     if (childContent.find("IDN") == 0)
     {
+        cerr << "DEBUG: Processing identifier: " << child->lexicalUnit << endl;
         SymbolTableEntry *entry = currentScope->lookup(child->lexicalUnit);
 
         if (!entry)
-            return reportError(node);
+        {
+            cerr << "DEBUG: Identifier not found in current scope\n";
+            reportError(node);
+            return;
+        }
 
         if (entry->type.isFunc())
-            return reportError(node);
+        {
+            cerr << "DEBUG: Identifier is a function, not allowed here\n";
+            reportError(node);
+            return;
+        }
 
+        // Set type and l-value status for identifier
         node->typeInfo = entry->type;
         node->isLValue = entry->type.lValue();
+        cerr << "DEBUG: Identifier type: " << node->typeInfo.toString() << ", l-value: " << node->isLValue << endl;
+        return;
     }
 
-    // Handle constants - validate format
+    // Handle constants
     if (childContent.find("BROJ") == 0)
     {
+        cerr << "DEBUG: Processing numeric constant: " << child->lexicalUnit << endl;
         if (!Validator::validateNumConstant(child->lexicalUnit, node->typeInfo))
         {
+            cerr << "DEBUG: Invalid numeric constant\n";
             reportError(node);
             return;
         }
@@ -56,8 +75,10 @@ void SemanticAnalyzer::IzrazProcessor::process_primarni_izraz(Node *node)
     }
     else if (childContent.find("ZNAK") == 0)
     {
+        cerr << "DEBUG: Processing character constant: " << child->lexicalUnit << endl;
         if (!Validator::validateCharConstant(child->lexicalUnit, node->typeInfo))
         {
+            cerr << "DEBUG: Invalid character constant\n";
             reportError(node);
             return;
         }
@@ -66,8 +87,10 @@ void SemanticAnalyzer::IzrazProcessor::process_primarni_izraz(Node *node)
     }
     else if (childContent.find("NIZ_ZNAKOVA") == 0)
     {
+        cerr << "DEBUG: Processing string constant: " << child->lexicalUnit << endl;
         if (!Validator::validateNizZnakova(child->lexicalUnit, node->typeInfo))
         {
+            cerr << "DEBUG: Invalid string constant\n";
             reportError(node);
             return;
         }
@@ -75,8 +98,10 @@ void SemanticAnalyzer::IzrazProcessor::process_primarni_izraz(Node *node)
         return;
     }
 
+    cerr << "DEBUG: Unknown primary expression\n";
     reportError(node);
 }
+
 
 void SemanticAnalyzer::IzrazProcessor::process_postfiks_izraz(Node *node)
 {
@@ -388,6 +413,7 @@ void SemanticAnalyzer::IzrazProcessor::process_cast_izraz(Node *node)
 
 void SemanticAnalyzer::IzrazProcessor::process_ime_tipa(Node *node)
 {
+    cerr << "DEBUG: Processing ime_tipa" << endl;
     if (!node)
     {
         reportError(node);
@@ -399,6 +425,7 @@ void SemanticAnalyzer::IzrazProcessor::process_ime_tipa(Node *node)
     {
         process_specifikator_tipa(node->children[0]);
         node->typeInfo = node->children[0]->typeInfo;
+        cerr << "DEBUG: ime_tipa type set to: " << node->typeInfo.toString() << endl;
         return;
     }
 

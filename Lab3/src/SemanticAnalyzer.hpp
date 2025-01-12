@@ -147,6 +147,7 @@ private:
         void process_init_deklarator(Node *node);
         void process_izravni_deklarator(Node *node);
         void process_inicijalizator(Node *node);
+        void process_lista_izraza_pridruzivanja(Node* node);
     };
 
     Node *root;

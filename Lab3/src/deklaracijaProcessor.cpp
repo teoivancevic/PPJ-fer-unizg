@@ -98,33 +98,58 @@ void SemanticAnalyzer::DeklaracijaProcessor::process_lista_parametara(Node *node
 
 void SemanticAnalyzer::DeklaracijaProcessor::process_deklaracija_parametra(Node *node)
 {
-    if (!node || node->children.size() < 2)
+    cerr << "DEBUG: Entering process_deklaracija_parametra\n";
+
+    if (!node || node->children.size() < 2) {
+        cerr << "DEBUG: Invalid node or insufficient children in process_deklaracija_parametra\n";
+        if (!node) cerr << "DEBUG: Node is null\n";
+        if (node) cerr << "DEBUG: Node children count: " << node->children.size() << endl;
         return;
+    }
 
     TypeInfo paramType = node->children[0]->typeInfo; // <ime_tipa> node
     string paramName = node->children[1]->content;    // IDN node
 
+    cerr << "DEBUG: Processing parameter with type: " << node->children[0]->symbol 
+         << " and name: " << paramName << endl;
+
     // Check parameter isn't void
-    if (paramType.isVoid())
-    {
+    if (paramType.isVoid()) {
+        cerr << "DEBUG: Parameter type is void, reporting error\n";
         reportError(node);
+        return;
     }
 
     // Handle array parameter if present
-    if (node->children.size() > 2 && node->children[2]->symbol == "L_UGL_ZAGRADA")
-    {
+    if (node->children.size() > 2 && node->children[2]->symbol == "L_UGL_ZAGRADA") {
+        cerr << "DEBUG: Detected array parameter for name: " << paramName << endl;
         paramType = TypeUtils::makeArrayType(paramType.getBaseType(), paramType.isConst());
+        cerr << "DEBUG: Updated parameter type to array: " << paramType.toString() << endl;
     }
 
     // Store parameter info
+    cerr << "DEBUG: Storing parameter info for: " << paramName 
+         << ", type: " << paramType.toString() << endl;
     node->typeInfo.functionParams.push_back(paramType);
 
     // Add parameter to current scope
     SymbolTableEntry paramEntry;
     paramEntry.name = paramName;
     paramEntry.type = paramType;
+
+    cerr << "DEBUG: Checking redeclaration for parameter: " << paramName << endl;
+    if (currentScope->lookup(paramName)) {
+        cerr << "DEBUG: Redeclaration detected for parameter: " << paramName << endl;
+        reportError(node);
+        return;
+    }
+
+    cerr << "DEBUG: Inserting parameter into scope: " << paramName << endl;
     currentScope->insert(paramName, paramEntry);
+
+    cerr << "DEBUG: Successfully processed parameter: " << paramName << endl;
 }
+
 
 void SemanticAnalyzer::DeklaracijaProcessor::process_lista_deklaracija(Node *node)
 {
@@ -144,12 +169,41 @@ void SemanticAnalyzer::DeklaracijaProcessor::process_lista_deklaracija(Node *nod
 
 void SemanticAnalyzer::DeklaracijaProcessor::process_deklaracija(Node *node)
 {
-    if (!node || node->children.size() < 3)
-        return;
-
-    // Get base type from <ime_tipa>
-    TypeInfo baseType = node->children[0]->typeInfo;
-
+    cerr << "DEBUG: === Starting deklaracija ===" << endl;
+    cerr << "DEBUG: Node children size: " << node->children.size() << endl;
+    
+    // First child should be ime_tipa
+    cerr << "DEBUG: First child symbol: " << node->children[0]->symbol << endl;
+    
+    // Check if const qualified
+    bool isConst = false;
+    Node* specTypeNode;
+    
+    if (node->children[0]->children[0]->content.find("KR_CONST") == 0) {
+        isConst = true;
+        specTypeNode = node->children[0]->children[1];
+    } else {
+        specTypeNode = node->children[0]->children[0];
+    }
+    
+    // Process specifikator_tipa
+    string typeSpecifier = specTypeNode->children[0]->content;
+    cerr << "DEBUG: Found type specifier: " << typeSpecifier 
+         << " isConst: " << isConst << endl;
+    
+    // Set base type
+    TypeInfo baseType;
+    if (typeSpecifier.find("KR_CHAR") == 0) {
+        baseType = TypeInfo(BasicType::CHAR, isConst);
+    } else if (typeSpecifier.find("KR_INT") == 0) {
+        baseType = TypeInfo(BasicType::INT, isConst);
+    } else if (typeSpecifier.find("KR_VOID") == 0) {
+        baseType = TypeInfo(BasicType::VOID, isConst);
+    }
+    
+    node->children[0]->typeInfo = baseType;
+    cerr << "DEBUG: Set type to: " << baseType.toString() << endl;
+    
     // Process initializer list with inherited type info
     node->children[1]->typeInfo = baseType;
     process_lista_init_deklaratora(node->children[1]);
@@ -179,30 +233,37 @@ void SemanticAnalyzer::DeklaracijaProcessor::process_init_deklarator(Node *node)
     if (!node || node->children.empty())
         return;
 
+    node->children[0]->typeInfo = node->typeInfo;
     process_izravni_deklarator(node->children[0]);
 
     // Check if there's an initializer
     if (node->children.size() > 1)
     {
-        IzrazProcessor izrazProcessor(SA);
-        izrazProcessor.process_izraz_pridruzivanja(node->children[2]);
+        process_inicijalizator(node->children[2]);
 
-        // Specific check for char initialization
-        if (node->children[0]->typeInfo.getBaseType() == BasicType::CHAR)
-        {
-            // For char, the initializer type must be exactly char
-            // This means `char c = c + 1` is invalid because c + 1 is int
-            if (node->children[2]->typeInfo.getBaseType() != BasicType::CHAR)
-            {
-                reportError(node);
+        // For array initialization, check size and type compatibility
+        if (node->children[0]->typeInfo.isArray()) {
+            // Array initialization size check should not error if initializer
+            // is smaller than array declaration
+            if (node->children[2]->arraySize <= node->children[0]->arraySize) {
+                // Types are compatible
+                return;
             }
         }
-        else
-        {
-            // For other types, use standard type compatibility
-            if (!node->children[2]->typeInfo.canImplicitlyConvertTo(node->children[0]->typeInfo))
+        // For non-array initialization
+        else {
+            if (node->children[0]->typeInfo.getBaseType() == BasicType::CHAR)
+            {
+                if (node->children[2]->typeInfo.getBaseType() != BasicType::CHAR)
+                {
+                    reportError(node);
+                    return;
+                }
+            }
+            else if (!node->children[2]->typeInfo.canImplicitlyConvertTo(node->children[0]->typeInfo))
             {
                 reportError(node);
+                return;
             }
         }
     }
@@ -212,17 +273,25 @@ void SemanticAnalyzer::DeklaracijaProcessor::process_init_deklarator(Node *node)
         if (node->children[0]->typeInfo.isConst())
         {
             reportError(node);
+            return;
         }
     }
 }
 
+
 void SemanticAnalyzer::DeklaracijaProcessor::process_izravni_deklarator(Node *node) {
+    cerr << "DEBUG: === Starting izravni_deklarator ===" << endl;
+    cerr << "DEBUG: Node type info: " << node->typeInfo.toString() << endl;
+
     if (!node || node->children.empty()) {
+        cerr << "DEBUG: Empty node" << endl;
         reportError(node);
         return;
     }
 
-    string name = node->children[0]->content; // IDN node
+    string name = node->children[0]->content;
+    cerr << "DEBUG: Processing identifier: " << name << endl;
+        
     
     // <izravni_deklarator> ::= IDN
     if (node->children.size() == 1) {
@@ -245,7 +314,10 @@ void SemanticAnalyzer::DeklaracijaProcessor::process_izravni_deklarator(Node *no
         currentScope->insert(name, entry);
     }
     // <izravni_deklarator> ::= IDN L_UGL_ZAGRADA BROJ D_UGL_ZAGRADA
+    // <izravni_deklarator> ::= IDN L_UGL_ZAGRADA BROJ D_UGL_ZAGRADA
     else if (node->children.size() == 4 && node->children[1]->content.find("L_UGL_ZAGRADA") == 0) {
+        cerr << "DEBUG: Processing array declaration" << endl;
+        
         // Check if type is void
         if (node->typeInfo.isVoid()) {
             reportError(node);
@@ -256,18 +328,20 @@ void SemanticAnalyzer::DeklaracijaProcessor::process_izravni_deklarator(Node *no
         int size;
         try {
             size = stoi(node->children[2]->lexicalUnit);
+            cerr << "DEBUG: Array size = " << size << endl;
         } catch (...) {
             reportError(node);
             return;
         }
 
         // Validate array size (positive and <= 1024)
+        // This check needs to happen BEFORE any other processing
         if (size <= 0 || size > 1024) {
-            reportError(node);
+            reportError(node);  // Report error immediately for invalid size
             return;
         }
 
-        // Check for redeclaration
+        // Only proceed with the rest if size is valid
         if (currentScope->lookup(name)) {
             reportError(node);
             return;
@@ -278,6 +352,7 @@ void SemanticAnalyzer::DeklaracijaProcessor::process_izravni_deklarator(Node *no
         entry.name = name;
         entry.type = TypeUtils::makeArrayType(node->typeInfo.getBaseType(), node->typeInfo.isConst());
         entry.arraySize = size;
+        node->arraySize = size;
         currentScope->insert(name, entry);
     }
     // <izravni_deklarator> ::= IDN L_ZAGRADA KR_VOID D_ZAGRADA
@@ -340,43 +415,51 @@ void SemanticAnalyzer::DeklaracijaProcessor::process_inicijalizator(Node *node) 
         IzrazProcessor izrazProcessor(SA);
         izrazProcessor.process_izraz_pridruzivanja(node->children[0]);
         
-        // Check if this is a string literal initializing an array
-        if (node->children[0]->typeInfo.isArray() && 
-            node->children[0]->typeInfo.getBaseType() == BasicType::CHAR) {
-            // Get string length (including null terminator)
-            size_t length = node->children[0]->lexicalUnit.length() - 2 + 1; // -2 for quotes, +1 for null
+        // Check if this is a string literal initialization
+        if (node->children[0]->children[0]->children[0]->children[0]->children[0]->children[0]->children[0]->symbol == "NIZ_ZNAKOVA") {
+            string strLiteral = node->children[0]->children[0]->children[0]->children[0]->children[0]->children[0]->children[0]->lexicalUnit;
+            size_t length = strLiteral.length() - 2 + 1; // -2 for quotes, +1 for null terminator
             
-            // Set array properties
-            node->typeInfo = TypeUtils::makeArrayType(BasicType::CHAR, true);
+            vector<TypeInfo> types(length, TypeInfo(BasicType::CHAR));
+            node->typeInfo = TypeInfo(BasicType::VOID, types);
             node->arraySize = length;
-            
-            vector<TypeInfo> elementTypes(length, TypeInfo(BasicType::CHAR));
-            node->typeInfo.functionParams = elementTypes; // Using functionParams to store element types
         } else {
-            // Normal initialization
             node->typeInfo = node->children[0]->typeInfo;
+            node->arraySize = 1;
         }
     }
     // <inicijalizator> ::= L_VIT_ZAGRADA <lista_izraza_pridruzivanja> D_VIT_ZAGRADA
     else if (node->children.size() == 3) {
-        // Process all initializer expressions
-        vector<TypeInfo> elementTypes;
-        int elementCount = 0;
+        process_lista_izraza_pridruzivanja(node->children[1]);
+        node->typeInfo = node->children[1]->typeInfo;
+        node->arraySize = node->children[1]->arraySize;
+    }
+}
+
+
+void SemanticAnalyzer::DeklaracijaProcessor::process_lista_izraza_pridruzivanja(Node *node) {
+    if (!node) return;
+
+    if (node->children.size() == 1) {
+        // Single expression
+        SA->izrazProcessor.process_izraz_pridruzivanja(node->children[0]);
+        node->typeInfo = node->children[0]->typeInfo;
+        node->arraySize = 1;
         
-        // Count and validate all initializer expressions
-        for (Node* child : node->children[1]->children) {
-            if (child->symbol == "<izraz_pridruzivanja>") {
-                IzrazProcessor izrazProcessor(SA);
-                izrazProcessor.process_izraz_pridruzivanja(child);
-                elementTypes.push_back(child->typeInfo);
-                elementCount++;
-            }
-        }
+        // Create single element vector of types
+        vector<TypeInfo> types = {node->typeInfo};
+        node->typeInfo = TypeInfo(BasicType::VOID, types);
+    }
+    else if (node->children.size() == 3) {
+        process_lista_izraza_pridruzivanja(node->children[0]);
+        SA->izrazProcessor.process_izraz_pridruzivanja(node->children[2]);
         
-        // Store array information
-        node->arraySize = elementCount;
-        node->typeInfo.functionParams = elementTypes; // Using functionParams to store element types
-    } else {
-        reportError(node);
+        // Get existing types from left side
+        vector<TypeInfo> types = node->children[0]->typeInfo.getFunctionParams();
+        // Add new type
+        types.push_back(node->children[2]->typeInfo);
+        
+        node->typeInfo = TypeInfo(BasicType::VOID, types);
+        node->arraySize = node->children[0]->arraySize + 1;
     }
 }
