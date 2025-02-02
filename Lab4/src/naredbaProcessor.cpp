@@ -55,17 +55,66 @@ void FRISCGenerator::NaredbaProcessor::process_lista_naredbi(Node *node) {
 
 // <process_naredba> ::= <izraz_naredba> | <naredba_grananja> | <naredba_petlje> | <naredba_skoka> | <slozena_naredba>
 void FRISCGenerator::NaredbaProcessor::process_naredba(Node *node) { 
-    // For this test case, we only need to handle naredba_skoka
-    if (node->children[0]->symbol == "<naredba_skoka>") {
+    if (node->children[0]->symbol == "<izraz_naredba>") {
+        process_izraz_naredba(node->children[0]);
+    }
+    else if (node->children[0]->symbol == "<naredba_grananja>") {
+        process_naredba_grananja(node->children[0]);
+    }
+    else if (node->children[0]->symbol == "<naredba_petlje>") {
+        process_naredba_petlje(node->children[0]);
+    }
+    else if (node->children[0]->symbol == "<naredba_skoka>") {
         process_naredba_skoka(node->children[0]);
+    }
+    else if (node->children[0]->symbol == "<slozena_naredba>") {
+        process_slozena_naredba(node->children[0]);
     }
 }
 
 // <naredba_grananja> ::= KR_IF L_ZAGRADA <izraz> D_ZAGRADA <naredba>
-// <naredba_grananja> ::= KR_IF L_ZAGRADA <izraz> D_ZAGRADA <naredba> KR_ELSE <naredba>
+    // <naredba_grananja> ::= KR_IF L_ZAGRADA <izraz> D_ZAGRADA <naredba> KR_ELSE <naredba>
 void FRISCGenerator::NaredbaProcessor::process_naredba_grananja(Node *node)
 {
+    int currentLabelId = FG->labelCounter++;
     
+    // Process the condition expression
+    FG->izrazProcessor.process_izraz(node->children[2]);
+    
+    if (node->children.size() == 5) {
+        // If statement without else
+        string labelEnd = "END_IF_" + to_string(currentLabelId);
+        
+        // If condition is false (0), jump to end
+        emit("    CMP R6, %D 0");
+        emit("    JP_EQ " + labelEnd);
+        
+        // Process the true branch
+        process_naredba(node->children[4]);
+        
+        // End label
+        emit(labelEnd);
+    }
+    else if (node->children.size() == 7) {
+        // If statement with else
+        string labelElse = "ELSE_" + to_string(currentLabelId);
+        string labelEnd = "END_IF_" + to_string(currentLabelId);
+        
+        // If condition is false (0), jump to else
+        emit("    CMP R6, %D 0");
+        emit("    JP_EQ " + labelElse);
+        
+        // Process the true branch
+        process_naredba(node->children[4]);
+        emit("    JP " + labelEnd);
+        
+        // Else branch
+        emit(labelElse);
+        process_naredba(node->children[6]);
+        
+        // End label
+        emit(labelEnd);
+    }
 }
 
 // <naredba_petlje> ::= KR_WHILE L_ZAGRADA <izraz> D_ZAGRADA <naredba>
@@ -87,13 +136,10 @@ void FRISCGenerator::NaredbaProcessor::process_naredba_skoka(Node *node)
         if (node->children.size() == 3) { // Has expression
             FG->izrazProcessor.process_izraz(node->children[1]);
         }
-        else {
-            // Void return - no value needed in R6
-        }
+        
+        // Specifically for function calls, we want to add a special handling
         emit("    RET");
     }
-    // Other jump statements (continue/break) would go here
-    // but aren't needed for this test case
 }
 
 // <izraz_naredba> ::= TOCKAZAREZ

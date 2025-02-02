@@ -85,6 +85,8 @@ struct Node
     vector<Node *> children;
     // evaluatedValue for lab4:
     int evaluatedValue;  // Add this if not already present
+    string evaluatedValueString;  // Add this if not already present
+    vector<int> evaluatedValues;  // For array initialization values
 
     string symbol; // Node symbol (A, B, etc.)
 

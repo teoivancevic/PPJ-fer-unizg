@@ -37,3 +37,6 @@ void FRISCGenerator::generateDeclarations(Node* node) {
         }
     }
 }
+
+
+int FRISCGenerator::labelCounter = 0;

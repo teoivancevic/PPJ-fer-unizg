@@ -110,6 +110,7 @@ private:
     void processPass(Node* node, bool isFunctionPass);
     void generateFunctions(Node* node);
     void generateDeclarations(Node* node);
+    static int labelCounter;
 
     void emit(const string& code) {
         outputFile << code << "\n";

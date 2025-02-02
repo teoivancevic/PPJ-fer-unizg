@@ -20,6 +20,23 @@ void FRISCGenerator::DeklaracijaProcessor::process_definicija_funkcije(Node *nod
     }
 }
 
+// void FRISCGenerator::DeklaracijaProcessor::process_definicija_funkcije(Node *node)
+// {
+//     // Get function name and emit label
+//     string funcName = node->children[1]->lexicalUnit;
+//     transform(funcName.begin(), funcName.end(), funcName.begin(), ::toupper);
+    
+//     // Special handling for void functions or functions with parameters
+//     if (node->children[2]->symbol == "<slozena_naredba>") {
+//         emit("F_" + funcName);
+//         FG->naredbaProcessor.process_slozena_naredba(node->children[2]);
+//     }
+//     else if (node->children[3]->symbol == "<slozena_naredba>") {
+//         emit("F_" + funcName);
+//         FG->naredbaProcessor.process_slozena_naredba(node->children[3]);
+//     }
+// }
+
 void FRISCGenerator::DeklaracijaProcessor::process_lista_parametara(Node *node)
 {
     
