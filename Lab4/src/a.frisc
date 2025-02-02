@@ -2,12 +2,3 @@
     CALL F_MAIN
     HALT
 
-F_MAIN
-    MOVE %D 1, R6
-    MOVE %D 4, R0
-    MUL R6, R0, R0
-    MOVE %D G_, R1
-    ADD R0, R1, R1
-    LOAD R6, (R1)
-    RET
-G_a

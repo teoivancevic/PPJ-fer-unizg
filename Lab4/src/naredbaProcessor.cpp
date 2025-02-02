@@ -120,9 +120,63 @@ void FRISCGenerator::NaredbaProcessor::process_naredba_grananja(Node *node)
 // <naredba_petlje> ::= KR_WHILE L_ZAGRADA <izraz> D_ZAGRADA <naredba>
 // <naredba_petlje> ::= KR_FOR L_ZAGRADA <izraz_naredba> <izraz_naredba> D_ZAGRADA <naredba>
 // <naredba_petlje> ::= KR_FOR L_ZAGRADA <izraz_naredba> <izraz_naredba> <izraz> D_ZAGRADA <naredba>
-void FRISCGenerator::NaredbaProcessor::process_naredba_petlje(Node *node)
-{
+void FRISCGenerator::NaredbaProcessor::process_naredba_petlje(Node *node) {
+    int currentLabel = FG->labelCounter++;
     
+    // WHILE loop
+    if (node->children[0]->content.find("KR_WHILE") == 0) {
+        string startLabel = "WHILE_" + to_string(currentLabel);
+        string endLabel = "WHILE_END_" + to_string(currentLabel);
+        
+        // Loop start label
+        emit(startLabel);
+        
+        // Process condition
+        FG->izrazProcessor.process_izraz(node->children[2]);
+        
+        // If condition is false (0), jump to end
+        emit("    CMP R6, %D 0");
+        emit("    JP_EQ " + endLabel);
+        
+        // Process loop body
+        process_naredba(node->children[4]);
+        
+        // Jump back to start
+        emit("    JP " + startLabel);
+        
+        // End label
+        emit(endLabel);
+    }
+    // FOR loop
+    else if (node->children[0]->content.find("KR_FOR") == 0) {
+        string startLabel = "FOR_" + to_string(currentLabel);
+        string endLabel = "FOR_END_" + to_string(currentLabel);
+        
+        // Process initialization
+        process_izraz_naredba(node->children[2]);
+        
+        // Loop start label
+        emit(startLabel);
+        
+        // Process condition
+        process_izraz_naredba(node->children[3]);
+        emit("    CMP R6, %D 0");
+        emit("    JP_EQ " + endLabel);
+        
+        // Process loop body
+        process_naredba(node->children[node->children.size() - 1]);
+        
+        // Process increment if it exists
+        if (node->children.size() == 7) {
+            FG->izrazProcessor.process_izraz(node->children[4]);
+        }
+        
+        // Jump back to condition check
+        emit("    JP " + startLabel);
+        
+        // End label
+        emit(endLabel);
+    }
 }
 
 // <naredba_skoka> ::= KR_BREAK | KR_CONTINUE
@@ -144,7 +198,18 @@ void FRISCGenerator::NaredbaProcessor::process_naredba_skoka(Node *node)
 
 // <izraz_naredba> ::= TOCKAZAREZ
 // <izraz_naredba> ::= <izraz> TOCKAZAREZ
-void FRISCGenerator::NaredbaProcessor::process_izraz_naredba(Node *node)
-{
-    
+void FRISCGenerator::NaredbaProcessor::process_izraz_naredba(Node *node) {
+    // <izraz_naredba> ::= TOCKAZAREZ
+    if (node->children.size() == 1) {
+        // Empty expression statement - nothing to do
+        node->evaluatedValue = 1;  // Default value for empty condition (for loops)
+    }
+    // <izraz_naredba> ::= <izraz> TOCKAZAREZ
+    else if (node->children.size() == 2) {
+        FG->izrazProcessor.process_izraz(node->children[0]);
+        // Propagate the expression's value up
+        node->evaluatedValue = node->children[0]->evaluatedValue;
+        node->evaluatedValueString = node->children[0]->evaluatedValueString;
+    }
 }
+

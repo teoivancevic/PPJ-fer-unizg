@@ -1,0 +1,26 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "LLDB: Debug",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/semAnalizator",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,  // Changed to false
+            "MIMode": "lldb",
+            "preLaunchTask": "C/C++: g++ build active file",
+            "targetArchitecture": "arm64",
+            // Add this section to handle input
+            "setupCommands": [
+                {
+                    "text": "settings set target.input-path ../test/25_fun_dekl_def/test.in",
+                    "description": "Set input file"
+                }
+            ]
+        }
+    ]
+}

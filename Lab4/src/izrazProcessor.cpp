@@ -23,7 +23,9 @@ void FRISCGenerator::IzrazProcessor::process_primarni_izraz(Node *node, bool emi
     }
     else if (node->children[0]->content.find("IDN") == 0) {
         string varName = node->children[0]->lexicalUnit;
+        // Important: Set both the string and value
         node->evaluatedValueString = varName;
+        node->evaluatedValue = 0;  // Default value for identifiers
         if (emitCode) {
             emit("    LOAD R6, (G_" + varName + ")");
         }
@@ -31,6 +33,8 @@ void FRISCGenerator::IzrazProcessor::process_primarni_izraz(Node *node, bool emi
     else if (node->children.size() == 3) {
         process_izraz(node->children[1], emitCode);
         node->evaluatedValue = node->children[1]->evaluatedValue;
+        // Important: Also propagate the string value
+        node->evaluatedValueString = node->children[1]->evaluatedValueString;
     }
 }
 
@@ -41,37 +45,77 @@ void FRISCGenerator::IzrazProcessor::process_postfiks_izraz(Node *node, bool emi
         node->evaluatedValueString = node->children[0]->evaluatedValueString;
         node->lineNumber = node->children[0]->lineNumber;
     }
-    else if (node->children[1]->content.find("L_UGL_ZAGRADA") == 0) {
+    else if (node->children.size() >= 4 && 
+             node->children[1]->content.find("L_UGL_ZAGRADA") == 0) {
         // Array access
         string arrayName = node->children[0]->children[0]->lexicalUnit;
-        process_izraz(node->children[2], emitCode);  // Get index into R6
+        
+        // Process array index
+        process_izraz(node->children[2], emitCode);
         
         if (emitCode) {
-            // Calculate array offset
-            emit("    MOVE %D 4, R0");         // Each element is 4 bytes
-            emit("    MUL R6, R0, R0");        // Multiply index by 4
-            emit("    MOVE %D G_" + arrayName + ", R1");  // Get array base address
-            emit("    ADD R0, R1, R1");        // Add offset to base
-            emit("    LOAD R6, (R1)");         // Load value from calculated address
+            emit("    SHL R6, %D 2, R0");     // Calculate offset (index * 4)
+            emit("    PUSH R0");              // Save offset
+            emit("    LOAD R0, (G_" + arrayName + ")"); // Load first element address
+            emit("    POP R1");               // Get back offset
+            emit("    ADD R0, R1, R0");       // Calculate final address
+            emit("    LOAD R6, (R0)");        // Load value
         }
     }
     else if (node->children.size() == 3 && 
              node->children[1]->content.find("L_ZAGRADA") == 0) {
         // Function call without arguments
-        // Call process_primarni_izraz to handle the function name
-        process_primarni_izraz(node->children[0], false);  // Don't emit code yet
-        
+        process_primarni_izraz(node->children[0], false);  // Process to get the name
+        string funcName = node->children[0]->evaluatedValueString;  // Use the propagated name
         if (emitCode) {
-            string funcName = node->children[0]->evaluatedValueString;
-            cerr << "FUNC NAME FROM POSFTIKS " << funcName << "."<< endl;
             emit("    CALL F_" + funcName);
         }
-        // The return value should already be in R6
+    }
+    else if (node->children.size() == 4 && 
+             node->children[1]->content.find("L_ZAGRADA") == 0) {
+        // Function call with arguments
+        string funcName = node->children[0]->evaluatedValueString;
+        // Process argument
+        process_izraz_pridruzivanja(node->children[2], emitCode);
+        if (emitCode) {
+            emit("    PUSH R6");  // Push argument onto stack
+            emit("    CALL F_" + funcName);
+            emit("    ADD R7, %D 4, R7");  // Clean up argument from stack
+        }
     }
 }
 
 void FRISCGenerator::IzrazProcessor::process_lista_argumenata(Node *node, bool emitCode) {
-    // To be implemented if needed
+    // <lista_argumenata> ::= <izraz_pridruzivanja>
+    // <lista_argumenata> ::= <lista_argumenata> ZAREZ <izraz_pridruzivanja>
+    
+    if (node->children.size() == 1) {
+        // Single argument
+        process_izraz_pridruzivanja(node->children[0], emitCode);
+        // Propagate values up
+        node->evaluatedValue = node->children[0]->evaluatedValue;
+        node->evaluatedValueString = node->children[0]->evaluatedValueString;
+        // For tracking function arguments
+        node->evaluatedValues = {node->children[0]->evaluatedValue};
+    } 
+    else {
+        // Multiple arguments: <lista_argumenata> ZAREZ <izraz_pridruzivanja>
+        process_lista_argumenata(node->children[0], emitCode);
+        process_izraz_pridruzivanja(node->children[2], emitCode);
+        
+        if (emitCode) {
+            // Push the result of the current argument onto stack
+            emit("    PUSH R6");
+        }
+        
+        // Combine argument values for propagation
+        node->evaluatedValues = node->children[0]->evaluatedValues;
+        node->evaluatedValues.push_back(node->children[2]->evaluatedValue);
+        
+        // Keep the latest value and string
+        node->evaluatedValue = node->children[2]->evaluatedValue;
+        node->evaluatedValueString = node->children[2]->evaluatedValueString;
+    }
 }
 
 
@@ -108,7 +152,27 @@ void FRISCGenerator::IzrazProcessor::process_unarni_izraz(Node *node, bool emitC
 }
 
 void FRISCGenerator::IzrazProcessor::process_unarni_operator(Node *node, bool emitCode) {
-    // To be implemented if needed
+    // <unarni_operator> ::= PLUS | MINUS | OP_TILDA | OP_NEG
+    
+    // Store the operator type for propagation
+    string op = node->children[0]->content;
+    node->evaluatedValueString = op;  // Propagate operator type up
+    
+    // No direct code generation here as the operator is applied in unarni_izraz
+    // But we need to propagate the operator type up for use in unarni_izraz
+    
+    if (op.find("PLUS") == 0) {
+        node->evaluatedValue = 1;  // Positive operator
+    }
+    else if (op.find("MINUS") == 0) {
+        node->evaluatedValue = -1;  // Negative operator
+    }
+    else if (op.find("OP_TILDA") == 0) {
+        node->evaluatedValue = 2;  // Bitwise NOT
+    }
+    else if (op.find("OP_NEG") == 0) {
+        node->evaluatedValue = 3;  // Logical NOT
+    }
 }
 
 void FRISCGenerator::IzrazProcessor::process_cast_izraz(Node *node, bool emitCode) {
