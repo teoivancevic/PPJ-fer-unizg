@@ -1,0 +1,13 @@
+    MOVE 40000, R7
+    CALL F_MAIN
+    HALT
+
+F_MAIN
+    LOAD R6, (G_x)
+    PUSH R6
+    LOAD R6, (G_y)
+    POP R0
+    ADD R0, R6, R6
+    RET
+G_x DW %D 15
+G_y DW %D 16

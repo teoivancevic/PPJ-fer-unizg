@@ -1,0 +1,268 @@
+#pragma once
+
+#include "utils.hpp"
+
+namespace Constants
+{
+    const int MIN_INT = -2147483648;
+    const int MAX_INT = 2147483647;
+    const int MIN_CHAR = 0;
+    const int MAX_CHAR = 255;
+
+    static bool isValidNumConstant(int value)
+    {
+        return value >= MIN_INT && value <= MAX_INT;
+    }
+
+    static bool isValidNumConstant(char value)
+    {
+        return value >= MIN_CHAR && value <= MAX_CHAR;
+    }
+
+    static bool isValidEscapeSequence(char c)
+    {
+        return c == 't' || c == 'n' || c == '0' ||
+               c == '\'' || c == '\"' || c == '\\';
+    }
+}
+
+enum class BasicType
+{
+    INT,
+    CHAR,
+    VOID,
+};
+
+class TypeInfo;
+
+namespace TypeUtils
+{
+    inline static bool isNumericType(const TypeInfo &type);
+    inline static bool isFunctionType(const TypeInfo &type);
+    inline static bool isArrayType(const TypeInfo &type);
+
+    static TypeInfo makeArrayType(BasicType type, bool constQualified = false);
+    static TypeInfo makeFunctionType(BasicType returnType = BasicType::VOID, vector<TypeInfo> params = vector<TypeInfo>());
+
+    static bool areTypesCompatible(const TypeInfo &source, const TypeInfo &target);
+
+    static string typeToString(const BasicType &type);
+    static string typeToString(const TypeInfo &type);
+
+    static std::string concatToString(const vector<TypeInfo> &c, const std::string delim = " ");
+}
+
+struct TypeInfo
+{
+    BasicType baseType = BasicType::VOID;
+    bool isConst_ = false;
+    bool isArray_ = false;
+    bool invalid = false;
+
+    // For function types
+    vector<TypeInfo> functionParams;
+    BasicType &returnType = baseType;
+
+    // const static TypeInfo VOID;  // Only declare it
+
+public:
+    TypeInfo() {}
+
+    static const TypeInfo VOID; // Universal VOID TypeInfo
+    // inline static const TypeInfo VOID = TypeInfo(BasicType::VOID);
+
+    // Constructor for variable types
+    TypeInfo(BasicType type, bool constQualified = false, bool array = false)
+        : baseType(type), isConst_(constQualified), isArray_(array) {}
+
+    // Constructor for function types
+    TypeInfo(BasicType returnType, vector<TypeInfo> params)
+        : baseType(returnType), functionParams(params)
+    {
+    }
+
+    // inline static const TypeInfo VOID{BasicType::VOID};
+
+    // Method to check implicit type conversion
+    bool canImplicitlyConvertTo(const TypeInfo &target) const
+    {
+        return TypeUtils::areTypesCompatible(*this, target);
+    }
+    bool canImplicitlyConvertTo(const BasicType &target) const
+    {
+        return canImplicitlyConvertTo(TypeInfo(target));
+    }
+
+    // Getters
+    BasicType getBaseType() const { return baseType; }
+    BasicType getReturnType() const { return returnType; }
+    bool isConst() const { return isConst_; }
+    bool isArray() const { return isArray_; }
+    bool isFunc() const { return !functionParams.empty(); }
+    const vector<TypeInfo> &getFunctionParams() const { return functionParams; }
+    bool isVoidParam() const { return functionParams[0] == TypeInfo::VOID && functionParams.size() == 1; }
+    bool isVoid() const { return baseType == BasicType::VOID && !isFunc(); }
+    bool lValue() const { return !isConst() && TypeUtils::isNumericType(*this); }
+
+    // Conversion to string
+    string toString() const
+    {
+        return TypeUtils::typeToString(*this);
+    }
+    string operator()() const
+    {
+        return toString();
+    }
+
+    // Operators
+    bool operator==(const TypeInfo &other) const
+    {
+        return baseType == other.baseType &&
+               isConst() == other.isConst() &&
+               isArray() == other.isArray() &&
+               isFunc() == other.isFunc() &&
+               functionParams == other.functionParams &&
+               returnType == other.returnType;
+    }
+
+    bool operator!=(const TypeInfo &other) const
+    {
+        return !(*this == other);
+    }
+
+    TypeInfo &operator=(const TypeInfo &other)
+    {
+        this->baseType = other.getBaseType();
+        this->isConst_ = other.isConst();
+        this->isArray_ = other.isArray();
+        this->functionParams = other.getFunctionParams(); // For function types
+        return *this;
+    }
+};
+
+namespace TypeUtils
+{
+
+    static string typeToString(const BasicType &type)
+    {
+        switch (type)
+        {
+        case BasicType::INT:
+            return "int";
+        case BasicType::CHAR:
+            return "char";
+        case BasicType::VOID:
+            return "void";
+        default:
+            return "unknown";
+        }
+    }
+    static string typeToString(const TypeInfo &type)
+    {
+        string result = TypeUtils::typeToString(type.getBaseType());
+        if (type.isConst())
+            result = "const(" + result + ")";
+        if (type.isArray())
+            result = "niz(" + result + ")";
+        if (type.isFunc())
+        {
+            result = "funkcija(";
+
+            if (type.isVoidParam())
+                result += "void";
+            else
+                result += "[" + concatToString(type.getFunctionParams(), ",") + "]";
+
+            result += " -> " + TypeUtils::typeToString(type.getReturnType()) + ")";
+        }
+        return result;
+    }
+
+    inline static bool isNumericType(const TypeInfo &type)
+    {
+        return !type.isFunc() && !type.isArray() && type.getBaseType() == BasicType::INT ||
+               type.getBaseType() == BasicType::CHAR;
+    }
+    inline static bool isFunctionType(const TypeInfo &type)
+    {
+        return type.isFunc();
+    }
+    inline static bool isArrayType(const TypeInfo &type)
+    {
+        return type.isArray();
+    }
+
+    static bool areTypesCompatible(const TypeInfo &source, const TypeInfo &target) 
+    {
+        // Same types are always compatible
+        if (source == target)
+            return true;
+
+        // Handle case where either type is void
+        if (source.isVoid() || target.isVoid())
+            return false;
+
+        // Handle functions - we can't convert functions
+        if (source.isFunc() || target.isFunc())
+            return false;
+
+        // Handle arrays - they must either be the same type or follow rule #4
+        if (source.isArray() && target.isArray()) {
+            // Base types must match
+            if (source.getBaseType() != target.getBaseType())
+                return false;
+                
+            // Rule #4: array(T) can convert to array(const(T)) 
+            // But array(const(T)) cannot convert to array(T)
+            if (!source.isConst() && target.isConst())
+                return true;
+                
+            // Otherwise arrays must be exactly the same type
+            return source.isConst() == target.isConst();
+        }
+
+        // Arrays cannot convert to non-arrays and vice versa
+        if (source.isArray() != target.isArray())
+            return false;
+
+        // Handle numeric types and their conversions
+        
+        // Rule #3: char can convert to int
+        if (source.getBaseType() == BasicType::CHAR && 
+            target.getBaseType() == BasicType::INT)
+            return true;
+
+        // Rules #1 and #2: const conversions for same base type
+        if (source.getBaseType() == target.getBaseType()) {
+            // Rule #1: const(T) -> T
+            if (source.isConst() && !target.isConst())
+                return true;
+            // Rule #2: T -> const(T)  
+            if (!source.isConst() && target.isConst())
+                return true;
+        }
+
+        return false;
+    }
+
+    static TypeInfo makeArrayType(BasicType type, bool constQualified)
+    {
+        return TypeInfo(type, constQualified, true);
+    }
+    static TypeInfo makeFunctionType(BasicType returnType, vector<TypeInfo> params)
+    {
+        return TypeInfo(returnType, params);
+    }
+
+    static std::string concatToString(const vector<TypeInfo> &c, const std::string delim)
+    {
+        std::string rez = "";
+        for (int i = (int)c.size() - 1; i > -1; i--)
+        {
+            rez += c[i].toString();
+            if (i)
+                rez += delim;
+        }
+        return rez;
+    }
+}
