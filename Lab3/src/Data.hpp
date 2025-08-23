@@ -10,38 +10,50 @@ struct SymbolTable
         string name;
         bool isDefined = false;
         int arraySize = -1; // For arrays (-1 if not array)
+        vector<Entry *> params;
     };
 
-    map<string, Entry> symbols;
-    SymbolTable *parent; // For scope chaining
+    map<string, Entry *> symbols;
+    SymbolTable *parent;
 
-    // Constructor
     SymbolTable(SymbolTable *parentScope = nullptr) : parent(parentScope) {}
 
-    bool insert(const string &name, const Entry &entry)
+    Entry *insert(const string &name, Entry *entry)
     {
-        // Check if symbol already exists in current scope
-        if (exists(symbols, name))
-            return false;
-        symbols.insert({name, entry});
-        return true;
+        Entry *old_entry = localLookup(name);
+
+        if (!old_entry)
+        {
+            symbols.insert({name, entry});
+            old_entry = entry;
+        }
+
+        return old_entry;
     }
 
     Entry *lookup(const string &name)
     {
-        // Look in current scope
         if (exists(symbols, name))
-            return &symbols.at(name);
+            return symbols.at(name);
 
-        // If not found and we have a parent scope, look there
         if (parent != nullptr)
             return parent->lookup(name);
 
-        return nullptr; // Not found in any scope
+        return nullptr;
+    }
+
+    Entry *localLookup(const string &name)
+    {
+        if (exists(symbols, name))
+            return symbols.at(name);
+
+        return nullptr;
     }
 
     SymbolTable *createChildScope() { return new SymbolTable(this); }
 };
+
+using SymbolTableEntry = SymbolTable::Entry;
 
 struct Node;
 
@@ -60,19 +72,23 @@ namespace TreeUtils
 
 struct Node
 {
-    Node *parent; // Parent node pointer
+    Node *parent;
     vector<Node *> children;
 
-    string symbol; // Node symbol (A, B, etc.)
-
-    TypeInfo typeInfo;
-    bool isLValue; // For l-value checking
+    string symbol;
 
     string content;
-    string lineNumber; // For error reporting
+    string lineNumber;
     string lexicalUnit;
 
-    int arraySize; // For array declarations
+    SymbolTableEntry entry;
+
+    bool isLValue = false;
+
+    TypeInfo &typeInfo = entry.type;
+    string &name = entry.name;
+    int &arraySize = entry.arraySize;
+    vector<SymbolTableEntry *> &params = entry.params;
 
     Node();
 
@@ -84,8 +100,11 @@ struct Node
             this->symbol = consumeNextWord(content);
             this->lineNumber = consumeNextWord(content);
             this->lexicalUnit = consumeNextWord(content);
+            this->entry.name = this->lexicalUnit;
         }
     }
+
+    size_t size() { return children.size(); }
 
     bool isTerminating() { return !(symbol[0] == '<'); }
 
@@ -95,12 +114,16 @@ struct Node
     bool isDeclaration(Node *node) { return node->symbol == "<deklaracija>" ||
                                             node->symbol == "<definicija_funkcije>"; }
 
+    void inherit(Node *other)
+    {
+        this->typeInfo = other->typeInfo;
+        this->isLValue = other->isLValue;
+    }
+
     ~Node()
     {
         for (Node *child : children)
-        {
             delete child;
-        }
     }
 };
 
@@ -154,6 +177,7 @@ namespace TreeUtils
         int spaces = 0;
         while (spaces < line.length() && line[spaces] == ' ')
             spaces++;
+
         return spaces;
     }
 
@@ -176,5 +200,3 @@ namespace TreeUtils
         exit(0);
     }
 }
-
-using SymbolTableEntry = SymbolTable::Entry;

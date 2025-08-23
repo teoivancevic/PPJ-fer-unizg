@@ -5,9 +5,40 @@
 class SemanticAnalyzer
 {
 private:
+    // Static helper functions
     class Validator
     {
     public:
+        static bool validateConstant(Node *node)
+        {
+            if (node->symbol == "BROJ")
+                return validateNumConstant(node->lexicalUnit, node->typeInfo);
+
+            else if (node->symbol == "ZNAK")
+                return validateCharConstant(node->lexicalUnit, node->typeInfo);
+
+            else if (node->symbol == "NIZ_ZNAKOVA")
+                return validateNizZnakova(node->lexicalUnit, node->typeInfo);
+
+            return 0;
+        }
+
+        static bool validateArraySize(const string &unit, int &size)
+        {
+            try
+            {
+                size = stoi(unit);
+                if (Constants::isValidArraySize(size))
+                    return true;
+
+                return false;
+            }
+            catch (...)
+            {
+                return false;
+            }
+        }
+
         static bool validateNumConstant(const string &unit, TypeInfo &outType)
         {
             try
@@ -69,8 +100,17 @@ private:
             outType = TypeUtils::makeArrayType(BasicType::CHAR, true);
             return true;
         }
+
+        static int isCharArray(Node *node)
+        {
+            while (node->size() == 1 && node->children[0]->symbol != "NIZ_ZNAKOVA")
+                node = node->children[0];
+
+            return node->symbol == "NIZ_ZNAKOVA" ? node->lexicalUnit.size() : 0;
+        }
     };
 
+    // Analysis handler
     class Processor
     {
     public:
@@ -81,6 +121,12 @@ private:
             for (Node *child : node->children)
                 if (!node->isTerminating())
                     SA->process(child);
+        }
+
+        void delegate(Node *node)
+        {
+            SA->process(node->children[0]);
+            node->inherit(node->children[0]);
         }
 
     protected:
@@ -95,6 +141,7 @@ private:
         using Processor::Processor;
 
         void process_primarni_izraz(Node *node);
+        void process_algebarski_izraz(Node *node);
         void process_postfiks_izraz(Node *node);
         void process_lista_argumenata(Node *node);
         void process_unarni_izraz(Node *node);
@@ -151,6 +198,14 @@ private:
 
     Node *root;
     SymbolTable *currentScope;
+    SymbolTable *globalScope()
+    {
+        SymbolTable *temp = currentScope;
+        while (temp->parent != nullptr)
+            temp = temp->parent;
+
+        return temp;
+    }
 
     IzrazProcessor izrazProcessor;
     NaredbaProcessor naredbaProcessor;
@@ -167,13 +222,11 @@ public:
     void run()
     {
         process(root);
-
-        // Final checks
         checkMainExists();
         checkAllFunctionsDefined();
     }
 
-    // aka provjeri
+private:
     void process(Node *node)
     {
         if (node->symbol == "<prijevodna_jedinica>")
@@ -313,7 +366,6 @@ public:
         }
     }
 
-private:
     void checkMainExists()
     {
         SymbolTableEntry *mainEntry = currentScope->lookup("main");
@@ -330,7 +382,7 @@ private:
     {
         for (const auto &[name, symbol] : currentScope->symbols)
         {
-            if (symbol.type.isFunc() && !symbol.isDefined)
+            if (symbol->type.isFunc() && !symbol->isDefined)
             {
                 cout << name << endl;
                 exit(0);

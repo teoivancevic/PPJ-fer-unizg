@@ -14,6 +14,11 @@ namespace Constants
         return value >= MIN_INT && value <= MAX_INT;
     }
 
+    static bool isValidArraySize(int value)
+    {
+        return value > 0 && value <= 1024;
+    }
+
     static bool isValidNumConstant(char value)
     {
         return value >= MIN_CHAR && value <= MAX_CHAR;
@@ -81,8 +86,6 @@ public:
     {
     }
 
-    // inline static const TypeInfo VOID{BasicType::VOID};
-
     // Method to check implicit type conversion
     bool canImplicitlyConvertTo(const TypeInfo &target) const
     {
@@ -93,16 +96,27 @@ public:
         return canImplicitlyConvertTo(TypeInfo(target));
     }
 
+    bool canExplicitlyConvertTo(const TypeInfo &target) const
+    {
+        return TypeUtils::isNumericType(*this) && TypeUtils::isNumericType(target);
+    }
+    bool canExplicitlyConvertTo(const BasicType &target) const
+    {
+        return canExplicitlyConvertTo(TypeInfo(target));
+    }
+
     // Getters
     BasicType getBaseType() const { return baseType; }
+    TypeInfo getBaseConstQualified() const { return TypeInfo(baseType, isConst()); }
     BasicType getReturnType() const { return returnType; }
+    const vector<TypeInfo> &getFunctionParams() const { return functionParams; }
+
     bool isConst() const { return isConst_; }
     bool isArray() const { return isArray_; }
     bool isFunc() const { return !functionParams.empty(); }
-    const vector<TypeInfo> &getFunctionParams() const { return functionParams; }
-    bool isVoidParam() const { return functionParams[0] == TypeInfo::VOID && functionParams.size() == 1; }
     bool isVoid() const { return baseType == BasicType::VOID && !isFunc(); }
     bool lValue() const { return !isConst() && TypeUtils::isNumericType(*this); }
+    bool isVoidParam() const { return functionParams[0] == TypeInfo::VOID && functionParams.size() == 1; }
 
     // Conversion to string
     string toString() const
@@ -142,7 +156,6 @@ public:
 
 namespace TypeUtils
 {
-
     static string typeToString(const BasicType &type)
     {
         switch (type)
@@ -157,6 +170,7 @@ namespace TypeUtils
             return "unknown";
         }
     }
+
     static string typeToString(const TypeInfo &type)
     {
         string result = TypeUtils::typeToString(type.getBaseType());
@@ -197,21 +211,18 @@ namespace TypeUtils
         // Same types always compatible
         if (source == target)
             return true;
-
         // Handle void, Array discrepancy and Functions
         if (source.isVoid() || target.isVoid() ||
             source.isArray() != target.isArray() ||
             source.isFunc() || target.isFunc())
             return false;
-
         // Handle const relationships for arrays and vars
         if (source.getBaseType() == target.getBaseType())
-            return !source.isConst();
-
+            return true;
         // Handle char -> int conversion
         if (source.getBaseType() == BasicType::CHAR &&
             target.getBaseType() == BasicType::INT &&
-            !source.isArray() && !source.isConst() && !target.isConst())
+            !source.isArray())
             return true;
 
         // Everything else is incompatible
@@ -224,6 +235,9 @@ namespace TypeUtils
     }
     static TypeInfo makeFunctionType(BasicType returnType, vector<TypeInfo> params)
     {
+        if (params.empty())
+            params.push_back(TypeInfo::VOID);
+
         return TypeInfo(returnType, params);
     }
 

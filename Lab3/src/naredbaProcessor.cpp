@@ -4,26 +4,48 @@ using namespace TreeUtils;
 
 // <prijevodna_jedinica> ::= <vanjska_deklaracija>
 // <prijevodna_jedinica> ::= <prijevodna_jedinica> <vanjska_deklaracija>
-void SemanticAnalyzer::NaredbaProcessor::process_prijevodna_jedinica(Node *node) { processAll(node); }
+void SemanticAnalyzer::NaredbaProcessor::process_prijevodna_jedinica(Node *node)
+{
+    cerr << "<prijevodna_jedinica>" << endl;
+    processAll(node);
+}
 
 // <vanjska_deklaracija> ::= <definicija_funkcije> | <deklaracija>
-void SemanticAnalyzer::NaredbaProcessor::process_vanjska_deklaracija(Node *node) { processAll(node); }
+void SemanticAnalyzer::NaredbaProcessor::process_vanjska_deklaracija(Node *node)
+{
+    cerr << "<vanjska_deklaracija>" << endl;
+    processAll(node);
+}
 
 // <slozena_naredba> ::= L_VIT_ZAGRADA <lista_naredbi> D_VIT_ZAGRADA
 // <slozena_naredba> ::= L_VIT_ZAGRADA <lista_deklaracija> <lista_naredbi> D_VIT_ZAGRADA
-void SemanticAnalyzer::NaredbaProcessor::process_slozena_naredba(Node *node) { processAll(node); }
+void SemanticAnalyzer::NaredbaProcessor::process_slozena_naredba(Node *node)
+{
+    cerr << "<slozena_naredba>" << endl;
+    processAll(node);
+}
 
 // <lista_naredbi> ::= <naredba>
 // <lista_naredbi> ::= <lista_naredbi> <naredba>
-void SemanticAnalyzer::NaredbaProcessor::process_lista_naredbi(Node *node) { processAll(node); }
+void SemanticAnalyzer::NaredbaProcessor::process_lista_naredbi(Node *node)
+{
+    cerr << "<lista_naredbi>" << endl;
+    processAll(node);
+}
 
 // <process_naredba> ::= <izraz_naredba> | <naredba_grananja> | <naredba_petlje> | <naredba_skoka> | <slozena_naredba>
-void SemanticAnalyzer::NaredbaProcessor::process_naredba(Node *node) { processAll(node); }
+void SemanticAnalyzer::NaredbaProcessor::process_naredba(Node *node)
+{
+    cerr << "<naredba>" << endl;
+    processAll(node);
+}
 
 // <naredba_grananja> ::= KR_IF L_ZAGRADA <izraz> D_ZAGRADA <naredba>
 // <naredba_grananja> ::= KR_IF L_ZAGRADA <izraz> D_ZAGRADA <naredba> KR_ELSE <naredba>
 void SemanticAnalyzer::NaredbaProcessor::process_naredba_grananja(Node *node)
 {
+    cerr << "<naredba_grananja>" << endl;
+
     // log expr must be int convertible
     SA->izrazProcessor.process_izraz(node->children[2]);
     if (!node->children[2]->typeInfo.canImplicitlyConvertTo(TypeInfo(BasicType::INT)))
@@ -37,6 +59,8 @@ void SemanticAnalyzer::NaredbaProcessor::process_naredba_grananja(Node *node)
 // <naredba_petlje> ::= KR_FOR L_ZAGRADA <izraz_naredba> <izraz_naredba> <izraz> D_ZAGRADA <naredba>
 void SemanticAnalyzer::NaredbaProcessor::process_naredba_petlje(Node *node)
 {
+    cerr << "<naredba_petlje>" << endl;
+
     if (node->children.size() == 5)
     {
         SA->izrazProcessor.process_izraz(node->children[2]);
@@ -64,6 +88,8 @@ void SemanticAnalyzer::NaredbaProcessor::process_naredba_petlje(Node *node)
 // <naredba_skoka> ::= KR_RETURN <izraz> TOCKAZAREZ
 void SemanticAnalyzer::NaredbaProcessor::process_naredba_skoka(Node *node)
 {
+    cerr << "<process_naredba_skoka>" << endl;
+
     if (node->children[0]->content.find("KR_CONTINUE") == 0 ||
         node->children[0]->content.find("KR_BREAK") == 0)
     {
@@ -82,11 +108,12 @@ void SemanticAnalyzer::NaredbaProcessor::process_naredba_skoka(Node *node)
     }
     else if (node->children[0]->content.find("KR_RETURN") == 0)
     {
-        // Find enclosing function
         Node *current = node;
         while (current && current->symbol != "<definicija_funkcije>")
+        {
+            cerr << "?" << current->symbol << endl;
             current = current->parent;
-
+        }
         if (!current)
             return reportError(node);
 
@@ -97,7 +124,7 @@ void SemanticAnalyzer::NaredbaProcessor::process_naredba_skoka(Node *node)
             SA->izrazProcessor.process_izraz(node->children[1]);
             returnType = node->children[1]->typeInfo;
         }
-
+        // cerr << "KILL YU" << returnType.toString() << " " << TypeUtils::typeToString(current->typeInfo.getReturnType()) << current->children[1]->lexicalUnit << endl;
         // check returnType compatibility
         if (!returnType.canImplicitlyConvertTo(current->typeInfo.getReturnType()))
             return reportError(node);
@@ -108,6 +135,8 @@ void SemanticAnalyzer::NaredbaProcessor::process_naredba_skoka(Node *node)
 // <izraz_naredba> ::= <izraz> TOCKAZAREZ
 void SemanticAnalyzer::NaredbaProcessor::process_izraz_naredba(Node *node)
 {
+    cerr << "<izraz_naredba>" << endl;
+
     node->typeInfo = TypeInfo(BasicType::INT); // Default type for empty expression
 
     if (node->children.size() == 2)
