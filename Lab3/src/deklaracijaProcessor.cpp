@@ -195,46 +195,118 @@ void SemanticAnalyzer::DeklaracijaProcessor::process_izravni_deklarator(Node *no
 {
     cerr << "<izravni_deklarator>" << endl;
 
-    node->name = node->children[0]->lexicalUnit;
-
-    cerr << node->typeInfo.toString() << endl;
-
-    // Value and array types
-    if ((node->size() == 1 || node->children[1]->symbol == "L_UGL_ZAGRADA"))
-    {
-        if (node->typeInfo == TypeInfo::VOID || currentScope->localLookup(node->name))
-            return reportError(node);
-
-        if (node->size() > 1)
-            if (!Validator::validateArraySize(node->children[2]->lexicalUnit, node->arraySize))
-                return reportError(node);
-            else
-                node->typeInfo = TypeUtils::makeArrayType(node->typeInfo.baseType);
+    string name = node->children[0]->content; // IDN node
+    
+    // <izravni_deklarator> ::= IDN
+    if (node->children.size() == 1) {
+        // Check if type is void
+        if (node->typeInfo.isVoid()) {
+            reportError(node);
+            return;
+        }
+        
+        // Check for redeclaration in current scope
+        if (currentScope->lookup(name)) {
+            reportError(node);
+            return;
+        }
+        
+        // Add to symbol table
+        SymbolTableEntry entry;
+        entry.name = name;
+        entry.type = node->typeInfo;
+        currentScope->insert(name, entry);
     }
-    // Functions
-    else if (node->children[1]->symbol == "L_ZAGRADA")
-    {
-        Node *list = node->children[2];
-        vector<TypeInfo> params;
-
-        if (list->symbol == "<lista_parametara>")
-        {
-            process_lista_parametara(list);
-            for (SymbolTableEntry *param : list->params)
-                params.push_back(param->type);
+    // <izravni_deklarator> ::= IDN L_UGL_ZAGRADA BROJ D_UGL_ZAGRADA
+    else if (node->children.size() == 4 && node->children[1]->content.find("L_UGL_ZAGRADA") == 0) {
+        // Check if type is void
+        if (node->typeInfo.isVoid()) {
+            reportError(node);
+            return;
         }
 
-        node->typeInfo = TypeUtils::makeFunctionType(node->typeInfo.getBaseType(), params);
+        // Parse array size
+        int size;
+        try {
+            size = stoi(node->children[2]->lexicalUnit);
+        } catch (...) {
+            reportError(node);
+            return;
+        }
+
+        // Validate array size (positive and <= 1024)
+        if (size <= 0 || size > 1024) {
+            reportError(node);
+            return;
+        }
+
+        // Check for redeclaration
+        if (currentScope->lookup(name)) {
+            reportError(node);
+            return;
+        }
+
+        // Create array type and add to symbol table
+        SymbolTableEntry entry;
+        entry.name = name;
+        entry.type = TypeUtils::makeArrayType(node->typeInfo.getBaseType(), node->typeInfo.isConst());
+        entry.arraySize = size;
+        currentScope->insert(name, entry);
     }
-    cerr << node->typeInfo.toString() << endl;
-    currentScope->insert(node->name, &(node->entry));
+    // <izravni_deklarator> ::= IDN L_ZAGRADA KR_VOID D_ZAGRADA
+    else if (node->children.size() == 4 && node->children[1]->content.find("L_ZAGRADA") == 0) {
+        // Check for previous declaration in local scope
+        auto* existing = currentScope->lookup(name);
+        if (existing) {
+            // Verify type matches if already declared
+            TypeInfo funcType = TypeUtils::makeFunctionType(node->typeInfo.getBaseType(), {TypeInfo::VOID});
+            if (existing->type != funcType) {
+                reportError(node);
+                return;
+            }
+        } else {
+            // Add new function declaration
+            SymbolTableEntry entry;
+            entry.name = name;
+            entry.type = TypeUtils::makeFunctionType(node->typeInfo.getBaseType(), {TypeInfo::VOID});
+            currentScope->insert(name, entry);
+        }
+    }
+    // <izravni_deklarator> ::= IDN L_ZAGRADA <lista_parametara> D_ZAGRADA
+    else if (node->children.size() == 4) {
+        process_lista_parametara(node->children[2]);
+        
+        auto* existing = currentScope->lookup(name);
+        if (existing) {
+            // Verify type matches if already declared
+            TypeInfo funcType = TypeUtils::makeFunctionType(
+                node->typeInfo.getBaseType(),
+                node->children[2]->typeInfo.getFunctionParams()
+            );
+            if (existing->type != funcType) {
+                reportError(node);
+                return;
+            }
+        } else {
+            // Add new function declaration
+            SymbolTableEntry entry;
+            entry.name = name;
+            entry.type = TypeUtils::makeFunctionType(
+                node->typeInfo.getBaseType(),
+                node->children[2]->typeInfo.getFunctionParams()
+            );
+            currentScope->insert(name, entry);
+        }
+    } else {
+        reportError(node);
+    }
 }
 
-// <inicijalizator> ::= <izraz_pridruzivanja>
-// <inicijalizator> ::= L_VIT_ZAGRADA <lista_izraza_pridruzivanja> D_VIT_ZAGRADA
-void SemanticAnalyzer::DeklaracijaProcessor::process_inicijalizator(Node *node)
-{
-    cerr << "<inicijalizator>" << endl;
+void SemanticAnalyzer::DeklaracijaProcessor::process_inicijalizator(Node *node) {
+    if (!node || node->children.empty()) {
+        reportError(node);
+        return;
+    }
 
     if (node->size() == 1)
     {
@@ -253,5 +325,48 @@ void SemanticAnalyzer::DeklaracijaProcessor::process_inicijalizator(Node *node)
 
         node->arraySize = list->arraySize;
         node->params = list->params;
+    // <inicijalizator> ::= <izraz_pridruzivanja>
+    if (node->children.size() == 1) {
+        IzrazProcessor izrazProcessor(SA);
+        izrazProcessor.process_izraz_pridruzivanja(node->children[0]);
+        
+        // Check if this is a string literal initializing an array
+        if (node->children[0]->typeInfo.isArray() && 
+            node->children[0]->typeInfo.getBaseType() == BasicType::CHAR) {
+            // Get string length (including null terminator)
+            size_t length = node->children[0]->lexicalUnit.length() - 2 + 1; // -2 for quotes, +1 for null
+            
+            // Set array properties
+            node->typeInfo = TypeUtils::makeArrayType(BasicType::CHAR, true);
+            node->arraySize = length;
+            
+            vector<TypeInfo> elementTypes(length, TypeInfo(BasicType::CHAR));
+            node->typeInfo.functionParams = elementTypes; // Using functionParams to store element types
+        } else {
+            // Normal initialization
+            node->typeInfo = node->children[0]->typeInfo;
+        }
+    }
+    // <inicijalizator> ::= L_VIT_ZAGRADA <lista_izraza_pridruzivanja> D_VIT_ZAGRADA
+    else if (node->children.size() == 3) {
+        // Process all initializer expressions
+        vector<TypeInfo> elementTypes;
+        int elementCount = 0;
+        
+        // Count and validate all initializer expressions
+        for (Node* child : node->children[1]->children) {
+            if (child->symbol == "<izraz_pridruzivanja>") {
+                IzrazProcessor izrazProcessor(SA);
+                izrazProcessor.process_izraz_pridruzivanja(child);
+                elementTypes.push_back(child->typeInfo);
+                elementCount++;
+            }
+        }
+        
+        // Store array information
+        node->arraySize = elementCount;
+        node->typeInfo.functionParams = elementTypes; // Using functionParams to store element types
+    } else {
+        reportError(node);
     }
 }
